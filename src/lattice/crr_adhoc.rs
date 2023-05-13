@@ -40,5 +40,5 @@ pub fn crr_euro_call() {
     println!("zero rate: {}", zero_rate);
     println!("maturity: {}", mat);
     println!("gird number: {}", grid_num);
-    println!("price of european call option: {}", vals[0]);
+    println!("(lattice)price of european call option: {}", vals[0]);
 }
