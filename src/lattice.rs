@@ -1,5 +1,5 @@
-mod crr;
+mod crr_adhoc;
 
 pub fn run() {
-    crr::crr_euro_call();
+    crr_adhoc::crr_euro_call();
 }
