@@ -1,14 +1,14 @@
 pub fn crr_euro_call() {
     // set parameter
-    let init_und = 100.0;
+    let underlying = 100.0;
     let strike = 98.0;
     let vol = 0.2;
     let zero_rate = 0.02;
-    let mat = 0.5;
+    let term_annu = 0.5;
     let grid_num = 181;
 
     // calc parameter
-    let delta_t = mat / grid_num as f64;
+    let delta_t = term_annu / grid_num as f64;
     let delta_t_sqrt = delta_t.sqrt();
     let val_up = (vol * delta_t_sqrt).exp();
     let val_down = (-vol * delta_t_sqrt).exp();
@@ -19,7 +19,7 @@ pub fn crr_euro_call() {
     let mut vals = vec![0.0; grid_num as usize];
 
     let val_up_square = val_up.powi(2);
-    vals[0] = init_und * val_down.powi(grid_num - 1);
+    vals[0] = underlying * val_down.powi(grid_num - 1);
     for i in 1..grid_num as usize {
         vals[i] = vals[i - 1] * val_up_square;
     }
@@ -34,11 +34,11 @@ pub fn crr_euro_call() {
             vals[j] = df * (rnp * vals[j + 1] + (1.0 - rnp) * vals[j]);
         }
     }
-    println!("underlying price: {}", init_und);
+    println!("underlying price: {}", underlying);
     println!("strike price: {}", strike);
     println!("volatility: {}", vol);
     println!("zero rate: {}", zero_rate);
-    println!("maturity: {}", mat);
+    println!("maturity: {}", term_annu);
     println!("gird number: {}", grid_num);
     println!("(lattice)price of european call option: {}", vals[0]);
 }
