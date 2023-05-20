@@ -14,16 +14,22 @@ pub enum OptionType {
     Put,
 }
 pub fn black_scholes(input: &CalcInput, option_type: OptionType) -> f64 {
-    let d1 = ((input.underlying / input.strike).ln()
-        + (input.zero_rate + 0.5 * input.vol.powi(2)) * input.term_annu)
-        / (input.vol * input.term_annu.sqrt());
-    let d2 = d1 - input.vol * input.term_annu.sqrt();
+    let CalcInput {
+        zero_rate,
+        vol,
+        term_annu,
+        strike,
+        underlying,
+    } = input;
+    let d1 = ((underlying / strike).ln() + (zero_rate + 0.5 * vol.powi(2)) * term_annu)
+        / (vol * term_annu.sqrt());
+    let d2 = d1 - vol * term_annu.sqrt();
     let sgn = match option_type {
         OptionType::Call => 1.0,
         OptionType::Put => -1.0,
     };
-    sgn * (input.underlying * norm_cdf_matic2016(sgn * d1)
-        - input.strike * (-input.zero_rate * input.term_annu).exp() * norm_cdf_matic2016(sgn * d2))
+    sgn * (underlying * norm_cdf_matic2016(sgn * d1)
+        - strike * (-zero_rate * term_annu).exp() * norm_cdf_matic2016(sgn * d2))
 }
 
 // Matic et al.(2016)
