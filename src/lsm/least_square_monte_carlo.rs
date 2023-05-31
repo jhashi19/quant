@@ -13,6 +13,7 @@ pub struct CalcInput {
     pub underlying: f64,
 }
 
+// nalgebraを使ったバージョンと比較してみる。
 pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f64 {
     let CalcInput {
         zero_rate,
@@ -49,6 +50,8 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
             und_path
         })
         .collect();
+    // let mut payoffs: Array1<f64> =
+    //     Array1::from_shape_fn(NUM_PATH, |i| (strike - und_paths[i][time_step]).max(0.0));
     for i in 0..NUM_PATH {
         payoffs[i] = (strike - und_paths[i][time_step]).max(0.0);
     }
@@ -89,14 +92,11 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
             ((((laguerre.t()).dot(&laguerre)).inv().unwrap()).dot(&laguerre.t())).dot(&explained);
 
         let mut not_excercise = [true; NUM_PATH];
+        let continuation_vals = laguerre.dot(&reg_coeffs);
         for (itm_path_idx, path) in itm_paths.iter().enumerate() {
             // itm_pathsはITMのみのため、0との比較は不要
             let intrinsic_val = strike - und_paths[*path][step];
-            let mut continuation_val = 0.0;
-            for i in 0..=3 {
-                continuation_val += reg_coeffs[i] * laguerre[[itm_path_idx, i]];
-            }
-            if intrinsic_val > continuation_val {
+            if intrinsic_val > continuation_vals[itm_path_idx] {
                 payoffs[*path] = intrinsic_val;
                 not_excercise[*path] = false;
             }
@@ -107,8 +107,32 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
                 payoffs[i] = df_one_step * payoffs[i];
             }
         }
+
+        // 基底関数はラゲール多項式の0～3項を使用する。
+        // let laguerre: Array2<f64> = Array2::from_shape_fn((NUM_PATH, 4), |(i, j)| {
+        //     laguerre_polynomial(und_paths[i][step])[j]
+        // });
+
+        // let explained: Array1<f64> = Array1::from_shape_fn(NUM_PATH, |i| df_one_step * &payoffs[i]);
+        // let reg_coeffs: Array1<f64> =
+        //     ((((laguerre.t()).dot(&laguerre)).inv().unwrap()).dot(&laguerre.t())).dot(&explained);
+
+        // let conti_vals = laguerre.dot(&reg_coeffs);
+
+        // let payoffs_tmp = &payoffs.clone();
+        // payoffs_tmp
+        //     .into_par_iter()
+        //     .enumerate()
+        //     .map(|(i, payoff)| {
+        //         let intrinsic_val = strike - und_paths[i][step];
+        //         if intrinsic_val > conti_vals[i] {
+        //             intrinsic_val
+        //         } else {
+        //             df_one_step * payoff
+        //         }
+        //     })
+        //     .collect_into_vec(&mut payoffs);
     }
-    // println!("{:?}", &payoffs);
     payoffs.par_iter().sum::<f64>() / NUM_PATH as f64 * df_one_step
 }
 
