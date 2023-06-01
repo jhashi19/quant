@@ -29,13 +29,8 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
     let delta_t = term_annu / time_step as f64;
     let df_one_step = (-zero_rate * delta_t).exp();
 
-    // let mut und_paths: Array2<f64> = Array2::zeros((NUM_PATH, time_step + 1));
     let und_paths: Vec<Vec<f64>> = vec![vec![0.0; time_step + 1]; NUM_PATH];
-    // let mut payoffs: Array1<f64> = Array1::zeros(NUM_PATH);
-    // let payoffs_tmp: Vec<f64> = vec![0.0; NUM_PATH];
     let mut payoffs: Vec<f64> = vec![0.0; NUM_PATH];
-    // let mut norm_rand: Array2<f64> = Array2::zeros((NUM_PATH, time_step));
-    // norm_rand.par_mapv_inplace(|_| -> f64 { StandardNormal.sample(&mut thread_rng()) });
     let und_paths: Vec<Vec<f64>> = und_paths
         .into_par_iter()
         .map(|mut und_path| -> Vec<f64> {
@@ -50,8 +45,7 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
             und_path
         })
         .collect();
-    // let mut payoffs: Array1<f64> =
-    //     Array1::from_shape_fn(NUM_PATH, |i| (strike - und_paths[i][time_step]).max(0.0));
+
     for i in 0..NUM_PATH {
         payoffs[i] = (strike - und_paths[i][time_step]).max(0.0);
     }
@@ -62,17 +56,6 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
     //     .collect();
     // let mut payoffs = &mut payoffs_tmp.clone();
     // drop(payoffs_tmp);
-
-    // for i in 0..NUM_PATH {
-    //     und_paths[[i, 0]] = underlying;
-    //     for j in 1..=time_step {
-    //         und_paths[[i, j]] = und_paths[[i, j - 1]]
-    //             * ((zero_rate - 0.5 * vol.powi(2)) * delta_t
-    //                 + vol * delta_t.sqrt() * norm_rand[[i, j - 1]])
-    //             .exp();
-    //     }
-    //     payoffs[i] = (strike - und_paths[[i, time_step]]).max(0.0);
-    // }
 
     for step in (1..time_step).rev() {
         let mut itm_paths: Vec<usize> = Vec::new();
@@ -108,7 +91,7 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
             }
         }
 
-        // 基底関数はラゲール多項式の0～3項を使用する。
+        // 回帰をITMに絞らないパターン。ITMのパスのインデックスを抽出する必要がなくなるが、遅くなる。
         // let laguerre: Array2<f64> = Array2::from_shape_fn((NUM_PATH, 4), |(i, j)| {
         //     laguerre_polynomial(und_paths[i][step])[j]
         // });
@@ -119,19 +102,14 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
 
         // let conti_vals = laguerre.dot(&reg_coeffs);
 
-        // let payoffs_tmp = &payoffs.clone();
-        // payoffs_tmp
-        //     .into_par_iter()
-        //     .enumerate()
-        //     .map(|(i, payoff)| {
-        //         let intrinsic_val = strike - und_paths[i][step];
-        //         if intrinsic_val > conti_vals[i] {
-        //             intrinsic_val
-        //         } else {
-        //             df_one_step * payoff
-        //         }
-        //     })
-        //     .collect_into_vec(&mut payoffs);
+        // for i in 0..NUM_PATH {
+        //     let intrinsic_val = strike - und_paths[i][step];
+        //     if intrinsic_val > conti_vals[i] {
+        //         payoffs[i] = intrinsic_val;
+        //     } else {
+        //         payoffs[i] = df_one_step * payoffs[i];
+        //     }
+        // }
     }
     payoffs.par_iter().sum::<f64>() / NUM_PATH as f64 * df_one_step
 }
