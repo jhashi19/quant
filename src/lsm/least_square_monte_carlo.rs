@@ -13,7 +13,6 @@ pub struct CalcInput {
     pub underlying: f64,
 }
 
-// nalgebraを使ったバージョンと比較してみる。
 pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f64 {
     let CalcInput {
         zero_rate,
@@ -29,8 +28,8 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
     let delta_t = term_annu / time_step as f64;
     let df_one_step = (-zero_rate * delta_t).exp();
 
+    // 2次元Vecで並列にパスを生成。今試した中ではこれが一番速い。
     let und_paths: Vec<Vec<f64>> = vec![vec![0.0; time_step + 1]; NUM_PATH];
-    let mut payoffs: Vec<f64> = vec![0.0; NUM_PATH];
     let und_paths: Vec<Vec<f64>> = und_paths
         .into_par_iter()
         .map(|mut und_path| -> Vec<f64> {
@@ -46,6 +45,19 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
         })
         .collect();
 
+    // Array1を使ってVecを要素としてpar_map_inplaceで並列にパスを生成。
+    // let mut und_paths: Array1<Vec<f64>> = Array1::from_elem(NUM_PATH, vec![0.0; time_step + 1]);
+    // und_paths.par_map_inplace(|und_path: &mut Vec<f64>| {
+    //     und_path[0] = underlying;
+    //     for i in 0..time_step {
+    //         let norm_rand: f64 = StandardNormal.sample(&mut thread_rng());
+    //         und_path[i + 1] = und_path[i]
+    //             * ((zero_rate - 0.5 * vol.powi(2)) * delta_t + vol * delta_t.sqrt() * norm_rand)
+    //                 .exp();
+    //     }
+    // });
+
+    let mut payoffs: Vec<f64> = vec![0.0; NUM_PATH];
     for i in 0..NUM_PATH {
         payoffs[i] = (strike - und_paths[i][time_step]).max(0.0);
     }
