@@ -1,7 +1,7 @@
-mod bs;
-mod lattice;
+// mod bs;
+// mod lattice;
 mod lsm;
-mod monte_carlo;
+// mod monte_carlo;
 
 fn main() {
     // lattice::run();

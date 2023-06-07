@@ -28,7 +28,7 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
     let delta_t = term_annu / time_step as f64;
     let df_one_step = (-zero_rate * delta_t).exp();
 
-    // 2次元Vecで並列にパスを生成。今試した中ではこれが一番速い。
+    // 2次元Vecで並列にパスを生成。いくつか試した中ではこれが一番速い。
     let und_paths: Vec<Vec<f64>> = vec![vec![0.0; time_step + 1]; NUM_PATH];
     let und_paths: Vec<Vec<f64>> = und_paths
         .into_par_iter()
@@ -57,17 +57,15 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
     //     }
     // });
 
-    let mut payoffs: Vec<f64> = vec![0.0; NUM_PATH];
-    for i in 0..NUM_PATH {
-        payoffs[i] = (strike - und_paths[i][time_step]).max(0.0);
-    }
-    // let payoffs_tmp: Vec<f64> = payoffs_tmp
-    //     .par_iter()
-    //     .enumerate()
-    //     .map(|(idx, _)| (strike - &und_paths[idx][time_step]).max(0.0))
-    //     .collect();
-    // let mut payoffs = &mut payoffs_tmp.clone();
-    // drop(payoffs_tmp);
+    let payoffs: Vec<f64> = vec![0.0; NUM_PATH];
+    // for i in 0..NUM_PATH {
+    //     payoffs[i] = (strike - und_paths[i][time_step]).max(0.0);
+    // }
+    let mut payoffs: Vec<f64> = payoffs
+        .par_iter()
+        .enumerate()
+        .map(|(idx, _)| (strike - &und_paths[idx][time_step]).max(0.0))
+        .collect();
 
     for step in (1..time_step).rev() {
         let mut itm_paths: Vec<usize> = Vec::new();
