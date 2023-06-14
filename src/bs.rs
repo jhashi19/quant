@@ -4,15 +4,15 @@ mod black_scholes;
 
 pub fn run() {
     let input = black_scholes::CalcInput {
-        zero_rate: 0.05,
+        underlying: 62.0,
+        strike: 60.0,
         vol: 0.2,
-        term_annu: 1.0,
-        strike: 100.0,
-        underlying: 100.0,
+        zero_rate: 0.1,
+        term_annu: 5.0 / 12.0,
     };
 
-    let option_type = black_scholes::OptionType::Put;
+    let option_type = black_scholes::OptionType::Call;
 
     let opt_val = black_scholes(&input, option_type);
-    println!("(analytical)price of european put option: {}", opt_val);
+    println!("(analytical)price of european call option: {}", opt_val);
 }
