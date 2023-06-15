@@ -12,7 +12,7 @@ pub fn run() {
         term_annu: 1.0,
     };
     let start = Instant::now();
-    let opt_price = longstaff_schwartz_american_put(&input, 100);
+    let opt_price = longstaff_schwartz_american_put(&input, 100, 10000);
     let end = start.elapsed();
     println!("(lsm) time:{}s", end.as_secs_f64());
     println!("(lsm) american option price: {}", opt_price);

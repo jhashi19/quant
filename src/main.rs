@@ -1,13 +1,13 @@
-mod bs;
+// mod bs;
 // mod lattice;
-mod lsm;
-// mod monte_carlo;
-mod fdm;
+// mod lsm;
+mod mc;
+// mod fdm;
 
 fn main() {
     // lattice::run();
-    bs::run();
+    // bs::run();
     // lsm::run();
-    // monte_carlo::run();
-    fdm::run();
+    mc::run();
+    // fdm::run();
 }

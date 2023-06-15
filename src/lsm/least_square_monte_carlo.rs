@@ -13,7 +13,11 @@ pub struct CalcInput {
     pub underlying: f64,
 }
 
-pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f64 {
+pub fn longstaff_schwartz_american_put(
+    input: &CalcInput,
+    time_step: usize,
+    num_path: usize,
+) -> f64 {
     let CalcInput {
         zero_rate,
         vol,
@@ -21,15 +25,14 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
         strike,
         underlying,
     } = *input;
-    const NUM_PATH: usize = 10000;
     println!("longstaff_schwartz_american_put");
-    println!("number of paths:{}", NUM_PATH);
+    println!("number of paths:{}", num_path);
 
     let delta_t = term_annu / time_step as f64;
     let df_one_step = (-zero_rate * delta_t).exp();
 
     // 2次元Vecで並列にパスを生成。いくつか試した中ではこれが一番速い。
-    let und_paths: Vec<Vec<f64>> = vec![vec![0.0; time_step + 1]; NUM_PATH];
+    let und_paths: Vec<Vec<f64>> = vec![vec![0.0; time_step + 1]; num_path];
     let und_paths: Vec<Vec<f64>> = und_paths
         .into_par_iter()
         .map(|mut und_path| -> Vec<f64> {
@@ -46,7 +49,7 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
         .collect();
 
     // Array1を使ってVecを要素としてpar_map_inplaceで並列にパスを生成。
-    // let mut und_paths: Array1<Vec<f64>> = Array1::from_elem(NUM_PATH, vec![0.0; time_step + 1]);
+    // let mut und_paths: Array1<Vec<f64>> = Array1::from_elem(num_path, vec![0.0; time_step + 1]);
     // und_paths.par_map_inplace(|und_path: &mut Vec<f64>| {
     //     und_path[0] = underlying;
     //     for i in 0..time_step {
@@ -57,8 +60,8 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
     //     }
     // });
 
-    let payoffs: Vec<f64> = vec![0.0; NUM_PATH];
-    // for i in 0..NUM_PATH {
+    let payoffs: Vec<f64> = vec![0.0; num_path];
+    // for i in 0..num_path {
     //     payoffs[i] = (strike - und_paths[i][time_step]).max(0.0);
     // }
     let mut payoffs: Vec<f64> = payoffs
@@ -69,7 +72,7 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
 
     for step in (1..time_step).rev() {
         let mut itm_paths: Vec<usize> = Vec::new();
-        for path in 0..NUM_PATH {
+        for path in 0..num_path {
             if strike - und_paths[path][step] > 0.0 {
                 itm_paths.push(path);
             }
@@ -84,7 +87,7 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
         let reg_coeffs: Array1<f64> =
             ((((laguerre.t()).dot(&laguerre)).inv().unwrap()).dot(&laguerre.t())).dot(&explained);
 
-        let mut not_excercise = [true; NUM_PATH];
+        let mut not_excercise = vec![true; num_path];
         let continuation_vals = laguerre.dot(&reg_coeffs);
         for (itm_path_idx, path) in itm_paths.iter().enumerate() {
             // itm_pathsはITMのみのため、0との比較は不要
@@ -95,24 +98,24 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
             }
         }
 
-        for i in 0..NUM_PATH {
+        for i in 0..num_path {
             if not_excercise[i] {
                 payoffs[i] = df_one_step * payoffs[i];
             }
         }
 
         // 回帰をITMに絞らないパターン。ITMのパスのインデックスを抽出する必要がなくなるが、遅くなる。
-        // let laguerre: Array2<f64> = Array2::from_shape_fn((NUM_PATH, 4), |(i, j)| {
+        // let laguerre: Array2<f64> = Array2::from_shape_fn((num_path, 4), |(i, j)| {
         //     laguerre_polynomial(und_paths[i][step])[j]
         // });
 
-        // let explained: Array1<f64> = Array1::from_shape_fn(NUM_PATH, |i| df_one_step * &payoffs[i]);
+        // let explained: Array1<f64> = Array1::from_shape_fn(num_path, |i| df_one_step * &payoffs[i]);
         // let reg_coeffs: Array1<f64> =
         //     ((((laguerre.t()).dot(&laguerre)).inv().unwrap()).dot(&laguerre.t())).dot(&explained);
 
         // let conti_vals = laguerre.dot(&reg_coeffs);
 
-        // for i in 0..NUM_PATH {
+        // for i in 0..num_path {
         //     let intrinsic_val = strike - und_paths[i][step];
         //     if intrinsic_val > conti_vals[i] {
         //         payoffs[i] = intrinsic_val;
@@ -121,7 +124,7 @@ pub fn longstaff_schwartz_american_put(input: &CalcInput, time_step: usize) -> f
         //     }
         // }
     }
-    payoffs.par_iter().sum::<f64>() / NUM_PATH as f64 * df_one_step
+    payoffs.par_iter().sum::<f64>() / num_path as f64 * df_one_step
 }
 
 // ラゲール多項式の0〜3までの項を返す
