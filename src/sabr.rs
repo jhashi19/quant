@@ -18,7 +18,7 @@ pub fn run() {
         fwd + 0.01,
         fwd + 0.02,
     ];
-    let mut params = vec![0.03, -0.2, 0.35];
+    let mut params = vec![0.01, 0.01, 0.5];
     let target_vals = arr1(&[0.3215, 0.248, 0.2222, 0.2040, 0.1923, 0.1867, 0.1887]);
     let max_iter: usize = 1000;
     let threshold = 1e-7;
