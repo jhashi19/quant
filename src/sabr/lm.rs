@@ -9,11 +9,11 @@ pub fn levenberg_marquardt(
     max_iter: usize,           // イテレーション回数の最大
     threshold: f64,            // ループ終了のための閾値
 ) {
-    let mut square_diff_new = 0.0; //残差二乗和(更新後)
+    let mut square_diff_new: f64; //残差二乗和(更新後)
     let mut square_diff_old = 0.0; //残差二乗和(更新前)
     let mut lamda = 0.001; //fudge factor
     let mut func_vals: Array1<f64> = Array1::zeros(target_vals.len()); // argsごとの関数の値
-    let mut residuals: Array1<f64> = Array1::zeros(target_vals.len()); // 残差ベクトル
+    let mut residuals: Array1<f64>; // 残差ベクトル
     let mut num_it = 0; //イテレーション回数
 
     while num_it < max_iter {
@@ -72,7 +72,7 @@ fn numerical_difference(
     params: &Vec<f64>,
     idx: usize,
 ) -> f64 {
-    let mut h = 0.0;
+    let h;
     if params[idx] == 0.0 {
         h = 0.0001;
     } else {

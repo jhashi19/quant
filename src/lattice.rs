@@ -3,7 +3,7 @@ mod lattice_crr;
 pub fn run() {
     lattice_crr::crr_euro_call();
 
-    let input = crr_layer::CalcInput {
+    let input = lattice_crr::CalcInput {
         underlying: 100.0,
         strike: 98.0,
         vol: 0.2,
