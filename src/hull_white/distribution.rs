@@ -1,3 +1,155 @@
+use std::f64::{INFINITY, NEG_INFINITY};
+
+// Acklam's algorithm
+pub fn inverse_cdf_std_normal(p: f64) -> f64 {
+    let a1 = -3.969683028665376e+01;
+    let a2 = 2.209460984245205e+02;
+    let a3 = -2.759285104469687e+02;
+    let a4 = 1.383577518672690e+02;
+    let a5 = -3.066479806614716e+01;
+    let a6 = 2.506628277459239e+00;
+
+    let b1 = -5.447609879822406e+01;
+    let b2 = 1.615858368580409e+02;
+    let b3 = -1.556989798598866e+02;
+    let b4 = 6.680131188771972e+01;
+    let b5 = -1.328068155288572e+01;
+
+    let c1 = -7.784894002430293e-03;
+    let c2 = -3.223964580411365e-01;
+    let c3 = -2.400758277161838e+00;
+    let c4 = -2.549732539343734e+00;
+    let c5 = 4.374664141464968e+00;
+    let c6 = 2.938163982698783e+00;
+
+    let d1 = 7.784695709041462e-03;
+    let d2 = 3.224671290700398e-01;
+    let d3 = 2.445134137142996e+00;
+    let d4 = 3.754408661907416e+00;
+
+    // break points
+    let p_low = 0.02425;
+    let p_high = 1.0 - p_low;
+
+    let calc_ratio = |q: f64| {
+        (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6)
+            / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1.0)
+    };
+
+    // 下側
+    if 0.0 < p && p < p_low {
+        let q = (-2.0 * p.ln()).sqrt();
+        return calc_ratio(q);
+
+    // 中央
+    } else if p_low <= p && p <= p_high {
+        let q = p - 0.5;
+        let r = q * q;
+        return (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q
+            / (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1.0);
+
+    // 上側
+    } else if p_high < p && p < 1.0 {
+        let q = (-2.0 * (1.0 - p).ln()).sqrt();
+        return -calc_ratio(q);
+    // 両端
+    } else {
+        if p >= 1.0 {
+            return INFINITY;
+        } else {
+            return NEG_INFINITY;
+        }
+    }
+}
+
+pub fn wichura_inverse_cdf_normal(x: f64) -> f64 {
+    let split1 = 0.425;
+    let split2 = 5.0;
+    let const1 = 0.180625;
+    let const2 = 1.6;
+
+    let a1 = 2.5090809287301226727e+03;
+    let a2 = 3.3430575583588128105e+04;
+    let a3 = 6.7265770927008700853e+04;
+    let a4 = 4.5921953931549871457e+04;
+    let a5 = 1.3731693765509461125e+04;
+    let a6 = 1.9715909503065514427e+03;
+    let a7 = 1.3314166789178437745e+02;
+    let a8 = 3.3871328727963666080e+00;
+
+    let b1 = 5.2264952788528545610e+03;
+    let b2 = 2.8729085735721942674e+04;
+    let b3 = 3.9307895800092710610e+04;
+    let b4 = 2.1213794301586595867e+04;
+    let b5 = 5.3941960214247511077e+03;
+    let b6 = 6.8718700749205790830e+02;
+    let b7 = 4.2313330701600911252e+01;
+
+    let c1 = 7.74545014278341407640e-04;
+    let c2 = 2.27238449892691845833e-02;
+    let c3 = 2.41780725177450611770e-01;
+    let c4 = 1.27045825245236838258e+00;
+    let c5 = 3.64784832476320460504e+00;
+    let c6 = 5.76949722146069140550e+00;
+    let c7 = 4.63033784615654529590e+00;
+    let c8 = 1.42343711074968357734e+00;
+
+    let d1 = 1.05075007164441684324e-09;
+    let d2 = 5.47593808499534494600e-04;
+    let d3 = 1.51986665636164571966e-02;
+    let d4 = 1.48103976427480074590e-01;
+    let d5 = 6.89767334985100004550e-01;
+    let d6 = 1.67638483018380384940e+00;
+    let d7 = 2.05319162663775882187e+00;
+
+    let e1 = 2.01033439929228813265e-07;
+    let e2 = 2.71155556874348757815e-05;
+    let e3 = 1.24266094738807843860e-03;
+    let e4 = 2.65321895265761230930e-02;
+    let e5 = 2.96560571828504891230e-01;
+    let e6 = 1.78482653991729133580e+00;
+    let e7 = 5.46378491116411436990e+00;
+    let e8 = 6.65790464350110377720e+00;
+
+    let f1 = 2.04426310338993978564e-15;
+    let f2 = 1.42151175831644588870e-07;
+    let f3 = 1.84631831751005468180e-05;
+    let f4 = 7.86869131145613259100e-04;
+    let f5 = 1.48753612908506148525e-02;
+    let f6 = 1.36929880922735805310e-01;
+    let f7 = 5.99832206555887937690e-01;
+
+    let mut r;
+
+    let q = x - 0.5;
+    if q.abs() <= split1 {
+        let r = const1 - q * q;
+        return q * (((((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * r + a7) * r + a8)
+            / (((((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + b6) * r + b7) * r + 1.0);
+    } else {
+        if q < 0.0 {
+            r = x;
+        } else {
+            r = 1.0 - x;
+        }
+        if r <= 0.0 {
+            return 0.0;
+        }
+        r = (-r.ln()).sqrt();
+        if r <= split2 {
+            r -= const2;
+            return q.signum()
+                * (((((((c1 * r + c2) * r + c3) * r + c4) * r + c5) * r + c6) * r + c7) * r + c8)
+                / (((((((d1 * r + d2) * r + d3) * r + d4) * r + d5) * r + d6) * r + d7) * r + 1.0);
+        } else {
+            r -= split2;
+            return q.signum()
+                * (((((((e1 * r + e2) * r + e3) * r + e4) * r + e5) * r + e6) * r + e7) * r + e8)
+                / (((((((f1 * r + f2) * r + f3) * r + f4) * r + f5) * r + f6) * r + f7) * r + 1.0);
+        }
+    }
+}
+
 pub fn moro_inverse_cdf_normal(average: f64, std_dev: f64, x: f64) -> f64 {
     let a0: f64 = 2.50662823884;
     let a1: f64 = -18.61500062529;
@@ -55,4 +207,123 @@ pub fn moro_inverse_cdf_normal(average: f64, std_dev: f64, x: f64) -> f64 {
 
 pub fn moro_inverse_cdf_std_normal(x: f64) -> f64 {
     moro_inverse_cdf_normal(0.0, 1.0, x)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_wichura_inverse_cdf_normal() {
+        let threshold = 10_f64.powi(-13);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.5398278372770290) - (-0.1)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.5792597094391030) - (-0.2)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.6179114221889526) - (-0.3)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.6554217416103242) - (-0.4)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.6914624612740131) - (-0.5)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.7257468822499270) - (-0.6)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.7580363477769270) - (-0.7)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.7881446014166033) - (-0.8)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.8159398746532405) - (-0.9)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.8413447460685429) - (-1.0)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.9331927987311419) - (-1.5)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.9772498680518208) - (-2.0)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.9937903346742240) - (-2.5)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.9986501019683699) - (-3.0)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.9997673709209645) - (-3.5)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(1.0 - 0.9999683287581669) - (-4.0)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.5)).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.5398278372770290) - 0.1).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.5792597094391030) - 0.2).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.6179114221889526) - 0.3).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.6554217416103242) - 0.4).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.6914624612740131) - 0.5).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.7257468822499270) - 0.6).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.7580363477769270) - 0.7).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.7881446014166033) - 0.8).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.8159398746532405) - 0.9).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.8413447460685429) - 1.0).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.9331927987311419) - 1.5).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.9772498680518208) - 2.0).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.9937903346742240) - 2.5).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.9986501019683699) - 3.0).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.9997673709209645) - 3.5).abs() < threshold);
+        assert!((wichura_inverse_cdf_normal(0.9999683287581669) - 4.0).abs() < threshold);
+    }
+
+    #[test]
+    fn test_inverse_cdf_std_normal() {
+        let threshold = 10_f64.powi(-8);
+        assert!((inverse_cdf_std_normal(1.0 - 0.5398278372770290) - (-0.1)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.5792597094391030) - (-0.2)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.6179114221889526) - (-0.3)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.6554217416103242) - (-0.4)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.6914624612740131) - (-0.5)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.7257468822499270) - (-0.6)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.7580363477769270) - (-0.7)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.7881446014166033) - (-0.8)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.8159398746532405) - (-0.9)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.8413447460685429) - (-1.0)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.9331927987311419) - (-1.5)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.9772498680518208) - (-2.0)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.9937903346742240) - (-2.5)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.9986501019683699) - (-3.0)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.9997673709209645) - (-3.5)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(1.0 - 0.9999683287581669) - (-4.0)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.5)).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.5398278372770290) - 0.1).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.5792597094391030) - 0.2).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.6179114221889526) - 0.3).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.6554217416103242) - 0.4).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.6914624612740131) - 0.5).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.7257468822499270) - 0.6).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.7580363477769270) - 0.7).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.7881446014166033) - 0.8).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.8159398746532405) - 0.9).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.8413447460685429) - 1.0).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.9331927987311419) - 1.5).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.9772498680518208) - 2.0).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.9937903346742240) - 2.5).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.9986501019683699) - 3.0).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.9997673709209645) - 3.5).abs() < threshold);
+        assert!((inverse_cdf_std_normal(0.9999683287581669) - 4.0).abs() < threshold);
+    }
+
+    #[test]
+    fn test_moro_inverse_cdf_std_normal() {
+        let threshold = 10_f64.powi(-8);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.5398278372770290) - (-0.1)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.5792597094391030) - (-0.2)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.6179114221889526) - (-0.3)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.6554217416103242) - (-0.4)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.6914624612740131) - (-0.5)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.7257468822499270) - (-0.6)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.7580363477769270) - (-0.7)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.7881446014166033) - (-0.8)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.8159398746532405) - (-0.9)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.8413447460685429) - (-1.0)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.9331927987311419) - (-1.5)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.9772498680518208) - (-2.0)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.9937903346742240) - (-2.5)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.9986501019683699) - (-3.0)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.9997673709209645) - (-3.5)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(1.0 - 0.9999683287581669) - (-4.0)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.5)).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.5398278372770290) - 0.1).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.5792597094391030) - 0.2).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.6179114221889526) - 0.3).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.6554217416103242) - 0.4).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.6914624612740131) - 0.5).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.7257468822499270) - 0.6).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.7580363477769270) - 0.7).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.7881446014166033) - 0.8).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.8159398746532405) - 0.9).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.8413447460685429) - 1.0).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.9331927987311419) - 1.5).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.9772498680518208) - 2.0).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.9937903346742240) - 2.5).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.9986501019683699) - 3.0).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.9997673709209645) - 3.5).abs() < threshold);
+        assert!((moro_inverse_cdf_std_normal(0.9999683287581669) - 4.0).abs() < threshold);
+    }
 }
