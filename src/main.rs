@@ -19,6 +19,6 @@ fn main() {
         "lsm" => lsm::run(),
         "mc" => mc::run(),
         "sabr" => sabr::run(),
-        _ => println!("there is no module {}", module),
+        _ => println!("there is no module: {}", module),
     }
 }

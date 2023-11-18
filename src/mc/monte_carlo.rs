@@ -2,6 +2,8 @@ use rand::thread_rng;
 use rand_distr::{Distribution, StandardNormal};
 use rayon::prelude::*;
 
+/* まだ足していく */
+
 #[derive(Debug, Copy, Clone)]
 pub struct CalcInput {
     pub zero_rate: f64,
