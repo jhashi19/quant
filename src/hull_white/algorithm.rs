@@ -1,4 +1,3 @@
-// Newton法をstructを使って実装してみる。
 pub struct Newton {
     func: fn(x: f64) -> f64, // ターゲットとなる1次元の関数。 =0の形であらわした左辺。
     func_deriv: fn(x: f64) -> f64, // funcの導関数
@@ -8,7 +7,7 @@ pub struct Newton {
 }
 
 impl Newton {
-    fn new(
+    pub fn new(
         func: fn(x: f64) -> f64,
         func_deriv: fn(x: f64) -> f64,
         x_max: f64,
@@ -24,7 +23,7 @@ impl Newton {
         }
     }
 
-    fn find_root(&self) -> f64 {
+    pub fn find_root(&self) -> f64 {
         let max_iter = 20;
         let mut root = 0.5 * (self.x_max + self.x_min);
         for _ in 0..max_iter {
@@ -42,7 +41,7 @@ impl Newton {
         panic!("Maximun number of iterations exceeded");
     }
 
-    fn find_root_safe(&self) -> f64 {
+    pub fn find_root_safe(&self) -> f64 {
         let max_iter = 100;
         let mut xf_high: f64; // x_maxとx_minのうち、funcが大きい値をとる方
         let mut xf_low: f64; // x_maxとx_minのうち、funcが小さい値をとる方
@@ -94,6 +93,16 @@ impl Newton {
         }
         panic!("Maximun number of iterations exceeded");
     }
+}
+
+pub struct LevenbergMarquardt {}
+
+impl LevenbergMarquardt {
+    pub fn new() -> Self {
+        LevenbergMarquardt {}
+    }
+
+    pub fn fit() {}
 }
 
 #[cfg(test)]

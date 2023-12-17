@@ -1,5 +1,9 @@
 mod algorithm;
+mod analysis;
+mod data;
 mod distribution;
+mod hw_lib;
+mod tree;
 
 use distribution::inverse_std_normal_cdf;
 
