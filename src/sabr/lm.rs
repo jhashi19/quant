@@ -1,10 +1,12 @@
 use ndarray::{Array1, Array2, ArrayBase, Dim, OwnedRepr};
 use ndarray_linalg::{FactorizeInto, Scalar, Solve};
 
+// TODO 調整するパラメータと固定するパラメータを合わせたベクタ引数として、調整するかどうかを同じ長さのbooleanのベクタとして引数に追加する
+// TODO 微分方法を指定できるように変更する。
 pub fn levenberg_marquardt(
     f: &dyn Fn(&f64, &Vec<f64>) -> f64,
     args: &Vec<f64>,           // fitさせるときに固定されるパラメータ
-    params: &mut Vec<f64>,     // firさせるときに変動させるパラメータの初期値
+    params: &mut Vec<f64>,     // fitさせるときに変動させるパラメータの初期値
     target_vals: &Array1<f64>, // argsごとの関数の値の収束先
     max_iter: usize,           // イテレーション回数の最大
     threshold: f64,            // ループ終了のための閾値
