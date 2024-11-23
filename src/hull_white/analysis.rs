@@ -1,58 +1,107 @@
+use super::data::{
+    self,
+    Curve::{self, Libor12M, Libor6M, Ois},
+};
+use super::interpolation::cubic_spline;
+use super::math::std_normal_cdf;
+
 /* One Factor Hull White
 dr_t = (θ_t - a * r_t) * dt - σ * dW_t */
 
-use super::distribution::std_normal_cdf;
-
+// Day Count Conventionは考慮しない。
+#[derive(Clone, Copy, Debug)]
 pub enum OptionType {
     Call,
     Put,
 }
 
-/// ディスカウントファクターを返します。
-/// * `t` -  割戻先
-/// * `matu` - 割戻元
-pub fn df(t: &f64, matu: &f64) -> f64 {
-    0.0
+#[derive(Clone, Copy, Debug)]
+pub enum CapFloorType {
+    Cap,
+    Floor,
+}
+
+/// 0時点までのディスカウントファクターを返します。
+/// * `curve` - ディスカウントカーブの種類(OIS、LIBOR6M、LIBOR12M)
+/// * `t` - 割戻し時点
+pub fn df(curve: Curve, t: &f64) -> f64 {
+    let (dates, rates) = data::match_curve(curve);
+    cubic_spline(&dates, &rates, t)
 }
 
 /// 割引債オプションの理論価格を返します。
-/// * `a` - HWモデルのa
-/// * `sigma` - HWモデルのsigma
-/// * `t` - 計算基準日
 /// * `mat_u` - 原資産の債券の満期日
 /// * `mat_o` - オプションの満期日
 /// * `strike` - 権利行使価格
+/// * `vol` - ボラティリティ
 /// * `op_type` - Call/Put
 pub fn discount_bond_option(
-    a: &f64,
-    sigma: &f64,
-    t: &f64,
     mat_u: &f64,
     mat_o: &f64,
     strike: &f64,
+    vol: &f64,
     op_type: OptionType,
 ) -> f64 {
-    let cp_sign = match op_type {
+    let sign = match op_type {
         OptionType::Call => 1.0,
         OptionType::Put => -1.0,
     };
-    let sigma_p = sigma / a
-        * (1.0 - (-2.0 * a * (mat_u - t)).exp() / (2.0 * a)).powf(0.5)
-        * (1.0 - (-a * (mat_o - mat_u)).exp());
-    let d = (df(t, mat_u) / (strike * df(t, mat_o))).ln() + 0.5 * sigma_p.powi(2) / sigma_p;
-    cp_sign * df(t, mat_u) * std_normal_cdf(cp_sign * d)
-        - cp_sign * df(t, mat_o) * std_normal_cdf(cp_sign * (d - sigma_p))
+    let d = (df(Ois, mat_u) / (strike * df(Ois, mat_o))).ln() + 0.5 * vol.powi(2) / vol;
+    sign * df(Ois, mat_u) * std_normal_cdf(sign * d)
+        - sign * df(Ois, mat_o) * std_normal_cdf(sign * (d - vol))
+}
+
+/// 割引債オプションのボラティリティを返します。
+pub fn dbo_sigma(a: &f64, sigma: &f64, mat_u: &f64, mat_o: &f64) -> f64 {
+    sigma / a
+        * (1.0 - (-2.0 * a * mat_o).exp() / (2.0 * a)).powf(0.5)
+        * (1.0 - (-a * (mat_u - mat_o)).exp())
 }
 
 /// Caplet、Floorletの理論価格を返します。
-pub fn capfloorlet() -> f64 {
-    // discount_bond_option使って計算する？(Hull-Whiteのpaper)
-    0.0
+pub fn capfloorlet(
+    date_s: &f64,
+    date_e: &f64,
+    strike: &f64,
+    vol: &f64,
+    cf_type: CapFloorType,
+    curve: Curve,
+) -> f64 {
+    let sign = match cf_type {
+        CapFloorType::Cap => -1.0,
+        CapFloorType::Floor => 1.0,
+    };
+    let delta = date_e - date_s;
+    let d = (((1.0 + delta * strike) * df(curve, date_e) / df(curve, date_s)).ln()
+        + 0.5 * vol.powi(2))
+        / vol;
+    df(Ois, date_e)
+        * (sign * (1.0 + delta * strike) * std_normal_cdf(sign * d)
+            - sign * df(curve, date_s) / df(curve, date_e) * std_normal_cdf(sign * (d - vol)))
+}
+
+/// Caplet、Floorletのボラティリティを返します。
+pub fn capfloorlet_sigma(a: &f64, sigma: &f64, date_s: &f64, date_e: &f64) -> f64 {
+    sigma / a * (1.0 - (-2.0 * date_s).exp()) / (0.5 * a).powf(0.5)
+        * (1.0 - (-a * (date_e - date_s)))
 }
 
 /// Cap、Floorの理論価格を返します。
-pub fn capfloor() -> f64 {
-    0.0
+pub fn capfloor(
+    dates: &Vec<f64>, // 各Caplet/Floorletの参照レートのスタートとエンドの日付(エンドが次のCFのスタートと一致すると仮定)
+    vols: &Vec<f64>,  // 各Caplet/Floorletのボラティリティ
+    strike: &f64,
+    cf_type: CapFloorType,
+    curve: Curve,
+) -> f64 {
+    if dates.len() != vols.len() {
+        panic!("CFの数とボラティリティの数が合っていません");
+    }
+    let mut price = 0.0;
+    for i in 0..dates.len() {
+        price += capfloorlet(&dates[i], &dates[i + 1], strike, &vols[i], cf_type, curve);
+    }
+    price
 }
 
 /// Swaptionの理論価格を返します。

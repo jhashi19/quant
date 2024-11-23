@@ -1,72 +1,78 @@
+#[derive(Clone, Debug)]
+pub struct Node {
+    pub trans_to: Vec<Self>,   // 遷移先のノード
+    pub trans_from: Vec<Self>, // 遷移元のノード
+    pub rate: f64,             // 当ノードから次のノードまでの期間の金利
+    pub rate_fluc_mean: f64,   // 当ノードの金利の変化幅の平均(期待値)
+    pub rate_fluc_var: f64,    // 当ノードの金利の変化幅の分散
+    pub p_up: f64,             // 遷移確率(上昇)
+    pub p_mid: f64,            // 遷移確率(変化なし)
+    pub p_down: f64,           // 遷移確率(下落)
+    pub arrow_debreu: f64,     // Arrow Debreu price
+}
+
+#[derive(Clone, Debug)]
 pub struct Tree {
-    pub delta_t: f64,          // Treeの時間の区間幅
-    pub delta_x: f64,          // Treeの金利の区間幅
-    pub mean: f64,             // 金利のdelta_tの間における変化の平均
-    pub var: f64,              // 金利のdelta_tの間における変化の分散
-    pub x_idx_max: usize,      // Treeの金利方向の最大ノードのインデックス
-    pub p_norm: Vec<Vec<f64>>, // 金利の通常の推移確率
-    pub p_max: Vec<f64>,       // 金利方向の最大ノードの推移確率
-    pub p_min: Vec<f64>,       // 金利方向の最小ノードの推移確率
-    pub tree: Vec<Vec<f64>>,   // Tree
+    pub time_vec: Vec<f64>,      // 時間方向のグリッドのベクトル
+    pub rate_interval: Vec<f64>, // 金利方向のグリッドの間隔
+    pub tree: Vec<Vec<Node>>,    // Treeの本体
+}
+
+impl Node {
+    pub fn new() -> Self {
+        Self {
+            trans_to: vec![],
+            trans_from: vec![],
+            rate: 0.0,
+            rate_fluc_mean: 0.0,
+            rate_fluc_var: 0.0,
+            p_up: 0.0,
+            p_mid: 0.0,
+            p_down: 0.0,
+            arrow_debreu: 0.0,
+        }
+    }
+
+    /// 金利の変化幅の期待値を返します。
+    pub fn calc_fluc_mean(a: &f64, rate: &f64, time_interval: f64) -> f64 {
+        ((-a + time_interval).exp() - 1.0) * rate
+    }
+
+    /// 金利の変化幅の分散を返します。
+    pub fn calc_fluc_var(a: &f64, sigma: &f64, time_interval: f64) -> f64 {
+        sigma.powi(2) * (1.0 - (-2.0 * a * time_interval).exp()) / (2.0 * a)
+    }
 }
 
 impl Tree {
     // 初期処理
-    // input: a, sigma, delta_t(ノードの時間間隔(横軸)), h(金利の間隔(縦軸)を計算するときのinput)
-    // output: 金利の間隔の期待値, 金利の間隔の分散, 金利の間隔(縦軸)
-    // TODO delta_tで時間幅を指定しているがTreeの満期と時間グリッドの数にした方がよい？
-    pub fn new(a: f64, sigma: f64, delta_t: f64, h: f64) -> Self {
-        let mean = (-a * delta_t).exp() - 1.0;
-        let var = sigma.powi(2) * 0.5 / a * (1.0 - (-2.0 * a * delta_t).exp());
-        let x_idx_max = ((1.0 - (1.0 - 1.0 / h).sqrt()) / mean).abs().ceil() as usize * 2;
-        // p_normは(i, 0)がup、(i, 1)がmiddle、(i, 2)がdown
-        // インデックスを -n～n → 0～2n に変換して推移確率を算出する。
-        let mut p_norm = Vec::with_capacity(2 * x_idx_max + 1);
-        for i in 0..2 * x_idx_max + 1 {
-            let idx_change = i - x_idx_max;
-            let idx_mean = idx_change as f64 * mean;
-            let prob_vec = vec![
-                0.5 * (1.0 / h + idx_mean.powi(2) + idx_mean),
-                1.0 - 1.0 / h - idx_mean.powi(2),
-                0.5 * (1.0 / h + idx_mean.powi(2) - idx_mean),
-            ];
-            p_norm[i] = prob_vec;
+    // 時間方向のベクトルと金利方向の間隔を設定する。
+    pub fn new(sigma: &f64, time_vec: Vec<f64>) -> Self {
+        let interval_num = time_vec.len() - 1;
+        let mut rate_interval = Vec::with_capacity(interval_num);
+        for i in 0..interval_num {
+            let time_interval = time_vec[i + 1] - time_vec[i];
+            rate_interval[i] = Self::calc_rate_interval(sigma, time_interval);
         }
-
-        let idx_max_mean = x_idx_max as f64 * mean;
-        // p_maxは(up, middle, down)
-        let p_max = vec![
-            1.0 + 0.5 * (1.0 / h + idx_max_mean.powi(2) + 3.0 * idx_max_mean),
-            -(1.0 / h + idx_max_mean.powi(2) + 2.0 * idx_max_mean),
-            0.5 * (1.0 / h + idx_max_mean.powi(2) + idx_max_mean),
-        ];
-        // p_minは(up, middle, down)
-        let p_min = vec![
-            0.5 * (1.0 / h + idx_max_mean.powi(2) + idx_max_mean),
-            -(1.0 / h + idx_max_mean.powi(2) + 2.0 * idx_max_mean),
-            1.0 + 0.5 * (1.0 / h + idx_max_mean.powi(2) + 3.0 * idx_max_mean),
-        ];
-        let delta_x = (h * var).sqrt();
-        let tree = Tree::construct_tree();
-        Tree {
-            delta_t,
-            delta_x,
-            mean,
-            var,
-            x_idx_max,
-            p_norm,
-            p_max,
-            p_min,
-            tree,
+        Self {
+            time_vec,
+            rate_interval,
+            tree: vec![vec![]],
         }
     }
 
-    // アロー・ドブリュー証券のツリーを作っておく？
-    // 上記のツリーのイールドカーブへのフィッティング
-    fn construct_tree() -> Vec<Vec<f64>> {
-        let mut tree: Vec<Vec<f64>> = vec![vec![0.0; 10]; 10];
-        tree
+    /// branching process を構築する。
+    // pub fn construct_base_tree(self) -> Tree {}
+
+    /// Treeをマーケットデータにadjustさせる。
+    // pub fn adjust_tree(self) -> {}
+
+    /// 金利方向のグリッドの間隔を返します。
+    fn calc_rate_interval(sigma: &f64, time_interval: f64) -> f64 {
+        sigma * (3.0 * time_interval).powf(0.5)
     }
 
-    // 各種商品をバックワードでプライシング
+    // Arrow-Debreu Tree作る？
+
+    // 各種商品をバックワードでプライシング → ファイル分ける
 }

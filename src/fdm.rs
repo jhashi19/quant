@@ -18,7 +18,7 @@ pub fn run() {
     // println!("(explicit_fdm_bs) european option price: {}", value);
 
     let start = Instant::now();
-    let value = finite_difference_method::implicit_fdm_cn_bs(&input, 120.0, 5000, 120);
+    let value = finite_difference_method::crank_nicolson_fdm_bs(&input, 120.0, 5000, 120);
     let end = start.elapsed();
     println!("(implicit_fdm_cn_bs) time:{}s", end.as_secs_f64());
     println!("(implicit_fdm_cn_bs) european option price: {}", value);

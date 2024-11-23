@@ -104,7 +104,7 @@ pub fn longstaff_schwartz_american_put(
             }
         }
 
-        // 回帰をITMに絞らないパターン。ITMのパスのインデックスを抽出する必要がなくなるが、遅くなる。
+        // 回帰をITMに絞らないパターン。ITMのパスのインデックスを抽出する必要がなくなるが、パスが多いため遅くなる。
         // let laguerre: Array2<f64> = Array2::from_shape_fn((num_path, 4), |(i, j)| {
         //     laguerre_polynomial(und_paths[i][step])[j]
         // });

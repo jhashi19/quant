@@ -51,8 +51,8 @@ pub fn explicit_fdm_bs(
     opt_vals[(underlying * num_price_idx as f64 / p_max) as usize]
 }
 
-// 有限差分法の陰解法、Crank-Nicolson法でBlack-Scholes偏微分方程式の数値解を導出する。
-pub fn implicit_fdm_cn_bs(
+// Crank-Nicolson法でBlack-Scholes偏微分方程式の数値解を導出する。
+pub fn crank_nicolson_fdm_bs(
     input: &CalcInput,
     p_max: f64,
     num_price_idx: usize,

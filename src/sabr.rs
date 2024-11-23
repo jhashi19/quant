@@ -3,7 +3,7 @@ mod sabr_lognormal;
 
 use lm::levenberg_marquardt;
 use ndarray::arr1;
-use sabr_lognormal::sabr_lognormal_hagan2002;
+use sabr_lognormal::sabr_lognormal;
 
 pub fn run() {
     let fwd = 0.03571;
@@ -23,7 +23,7 @@ pub fn run() {
     let max_iter: usize = 1000;
     let threshold = 1e-7;
     let rap_fn = |arg: &f64, params: &Vec<f64>| -> f64 {
-        sabr_lognormal_hagan2002(*arg, fwd, term, beta, params[0], params[1], params[2])
+        sabr_lognormal(*arg, fwd, term, beta, params[0], params[1], params[2])
     };
     levenberg_marquardt(
         &rap_fn,

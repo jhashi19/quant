@@ -7,7 +7,7 @@ pub fn levenberg_marquardt(
     f: &dyn Fn(&f64, &Vec<f64>) -> f64,
     args: &Vec<f64>,           // fitさせるときに固定されるパラメータ
     params: &mut Vec<f64>,     // fitさせるときに変動させるパラメータの初期値
-    target_vals: &Array1<f64>, // argsごとの関数の値の収束先
+    target_vals: &Array1<f64>, // argsごとの関数の値の収束先  TODO IFを考えると引数にndarrayの型は使わない方がよい。
     max_iter: usize,           // イテレーション回数の最大
     threshold: f64,            // ループ終了のための閾値
 ) {

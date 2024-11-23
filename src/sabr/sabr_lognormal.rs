@@ -1,5 +1,5 @@
 // Hagan et al. 2002
-pub fn sabr_lognormal_hagan2002(
+pub fn sabr_lognormal(
     strike: f64,
     fwd: f64,
     term: f64,

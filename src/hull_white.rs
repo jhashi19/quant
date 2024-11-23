@@ -1,11 +1,12 @@
 mod algorithm;
 mod analysis;
 mod data;
-mod distribution;
 mod hw_lib;
+mod interpolation;
+mod math;
 mod tree;
 
-use distribution::inverse_std_normal_cdf;
+use math::inverse_std_normal_cdf;
 
 pub fn run() {
     for i in 0..1000 {

@@ -40,24 +40,24 @@ pub fn inverse_std_normal_cdf(x: f64) -> f64 {
     if x_low <= x && x <= x_high {
         let q = x - 0.5;
         let r = q * q;
-        return (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q
-            / (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1.0);
+        (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q
+            / (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1.0)
     // 下側
     } else if 0.0 < x && x < x_low {
         let q = (-2.0 * x.ln()).sqrt();
-        return (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6)
-            / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1.0);
+        (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6)
+            / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1.0)
     // 上側
     } else if x_high < x && x < 1.0 {
         let q = (-2.0 * (1.0 - x).ln()).sqrt();
-        return -(((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6)
-            / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1.0);
+        -(((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6)
+            / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1.0)
     // 両端
     } else {
         if x >= 1.0 {
-            return INFINITY;
+            INFINITY
         } else {
-            return NEG_INFINITY;
+            NEG_INFINITY
         }
     }
 }
@@ -124,8 +124,8 @@ pub fn wichura_inverse_normal_cdf(x: f64) -> f64 {
     let q = x - 0.5;
     if q.abs() <= split1 {
         let r = const1 - q * q;
-        return q * (((((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * r + a7) * r + a8)
-            / (((((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + b6) * r + b7) * r + 1.0);
+        q * (((((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * r + a7) * r + a8)
+            / (((((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + b6) * r + b7) * r + 1.0)
     } else {
         if q < 0.0 {
             r = x;
@@ -138,14 +138,14 @@ pub fn wichura_inverse_normal_cdf(x: f64) -> f64 {
         r = (-r.ln()).sqrt();
         if r <= split2 {
             r -= const2;
-            return q.signum()
+            q.signum()
                 * (((((((c1 * r + c2) * r + c3) * r + c4) * r + c5) * r + c6) * r + c7) * r + c8)
-                / (((((((d1 * r + d2) * r + d3) * r + d4) * r + d5) * r + d6) * r + d7) * r + 1.0);
+                / (((((((d1 * r + d2) * r + d3) * r + d4) * r + d5) * r + d6) * r + d7) * r + 1.0)
         } else {
             r -= split2;
-            return q.signum()
+            q.signum()
                 * (((((((e1 * r + e2) * r + e3) * r + e4) * r + e5) * r + e6) * r + e7) * r + e8)
-                / (((((((f1 * r + f2) * r + f3) * r + f4) * r + f5) * r + f6) * r + f7) * r + 1.0);
+                / (((((((f1 * r + f2) * r + f3) * r + f4) * r + f5) * r + f6) * r + f7) * r + 1.0)
         }
     }
 }
