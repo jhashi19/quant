@@ -4,6 +4,7 @@ mod data;
 mod hw_lib;
 mod interpolation;
 mod math;
+mod node;
 mod tree;
 
 use math::inverse_std_normal_cdf;
