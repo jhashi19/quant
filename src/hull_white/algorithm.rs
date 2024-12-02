@@ -24,8 +24,8 @@ impl Newton {
     }
 
     pub fn find_root(&self) -> f64 {
-        let max_iter = 20;
-        let mut root = 0.5 * (self.x_max + self.x_min);
+        let max_iter = 20; // 最大イテレーション回数
+        let mut root = 0.5 * (self.x_max + self.x_min); // 根の初期値は根が存在する区間の中間
         for _ in 0..max_iter {
             let f = (self.func)(root);
             let df = (self.func_deriv)(root);
@@ -117,14 +117,14 @@ mod tests {
     }
 
     #[test]
-    fn test_find_root() {
+    fn test_newton_find_root() {
         let ins = Newton::new(func, func_deriv, 2.0, 0.0, 1.0e-7);
         let root = ins.find_root();
         assert!((root - 2_f64.powf(0.5)).abs() < 1.0e-10);
     }
 
     #[test]
-    fn test_find_root_safe() {
+    fn test_newton_find_root_safe() {
         let ins = Newton::new(func, func_deriv, 2.0, 0.0, 1.0e-7);
         let root = ins.find_root_safe();
         assert!((root - 2_f64.powf(0.5)).abs() < 1.0e-10);
