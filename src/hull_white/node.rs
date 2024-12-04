@@ -1,36 +1,36 @@
 #[derive(Clone, Debug)]
 pub struct Node {
-    pub transition_to: Vec<usize>, // 遷移先のノードの金利方向のセンタリングされたインデックスのベクタ(要素数は3)
-    pub rate: f64,                 // 当ノードから次のノードまでの期間の金利
-    pub rate_fluctuation_mean: f64, // 当ノードの金利の変化幅の平均(期待値)
-    pub rate_fluctuation_var: f64, // 当ノードの金利の変化幅の分散
-    pub prob_up: f64,              // 遷移確率(上昇)
-    pub prob_mid: f64,             // 遷移確率(中間)
-    pub prob_down: f64,            // 遷移確率(下落)
-    pub arrow_debreu: f64,         // Arrow Debreu price
+    pub rate: f64,                      // 当ノードから次のノードまでの期間の金利
+    pub arrow_debreu: f64,              // Arrow Debreu price
+    pub transition_to_mid_index: isize, // 遷移先のノードの金利方向のセンタリングされたインデックスのベクタ
+    pub rate_fluctuation_mean: f64,     // 当ノードの金利の変化幅の平均(期待値)
+    pub rate_fluctuation_var: f64,      // 当ノードの金利の変化幅の分散
+    pub prob_up: f64,                   // 遷移確率(上昇)
+    pub prob_mid: f64,                  // 遷移確率(中間)
+    pub prob_down: f64,                 // 遷移確率(下落)
 }
 
 impl Node {
     pub fn new() -> Self {
         Self {
-            transition_to: vec![],
             rate: 0.0,
+            arrow_debreu: 0.0,
+            transition_to_mid_index: 0,
             rate_fluctuation_mean: 0.0,
             rate_fluctuation_var: 0.0,
             prob_up: 0.0,
             prob_mid: 0.0,
             prob_down: 0.0,
-            arrow_debreu: 0.0,
         }
     }
 
     /// 金利の変化幅の期待値を返します。
-    pub fn calc_fluctuation_mean(a: &f64, rate: f64, time_interval: f64) -> f64 {
+    pub fn calc_fluctuation_mean(a: f64, rate: f64, time_interval: f64) -> f64 {
         ((-a + time_interval).exp() - 1.0) * rate
     }
 
     /// 金利の変化幅の分散を返します。
-    pub fn calc_fluctuation_var(a: &f64, sigma: &f64, time_interval: f64) -> f64 {
+    pub fn calc_fluctuation_var(a: f64, sigma: f64, time_interval: f64) -> f64 {
         sigma.powi(2) * (1.0 - (-2.0 * a * time_interval).exp()) / (2.0 * a)
     }
 
@@ -82,18 +82,18 @@ impl Node {
     }
 
     /// 遷移先(上昇)のインデックスを返します。
-    pub fn get_transition_index_up(&self) -> usize {
-        self.transition_to[2]
+    pub fn get_transition_index_up(&self) -> isize {
+        self.transition_to_mid_index + 1
     }
 
     /// 遷移先(中間)のインデックスを返します。
-    pub fn get_transition_index_mid(&self) -> usize {
-        self.transition_to[1]
+    pub fn get_transition_index_mid(&self) -> isize {
+        self.transition_to_mid_index
     }
 
     /// 遷移先(下落)のインデックスを返します。
-    pub fn get_transition_index_down(&self) -> usize {
-        self.transition_to[0]
+    pub fn get_transition_index_down(&self) -> isize {
+        self.transition_to_mid_index - 1
     }
 
     // Arrow Debreu price
