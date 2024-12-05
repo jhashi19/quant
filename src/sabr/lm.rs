@@ -1,5 +1,5 @@
 use ndarray::{Array1, Array2, ArrayBase, Dim, OwnedRepr};
-use ndarray_linalg::{FactorizeInto, Scalar, Solve};
+use ndarray_linalg::{FactorizeInto, Solve};
 
 // TODO 調整するパラメータと固定するパラメータを合わせたベクタ引数として、調整するかどうかを同じ長さのbooleanのベクタとして引数に追加する
 // TODO 微分方法を指定できるように変更する。

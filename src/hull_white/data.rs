@@ -1,29 +1,12 @@
-//! マーケットデータを当ファイルに保持する。
-//! DBやcsv等のファイルから読み込む方がよいが、今回は固定のデータとする。
-//! 当ファイルにベクタになった状態でデータを保持しているものとする。
+//! マーケットデータを以下で取得済とする。
 
-#[derive(Clone, Copy, Debug)]
-pub enum Curve {
-    Ois,
-    Libor6M,
-    Libor12M,
-}
-
-pub fn match_curve(curve: Curve) -> (Vec<f64>, Vec<f64>) {
-    match curve {
-        Curve::Ois => (get_ois_date(), get_ois_rate()),
-        Curve::Libor6M => (get_libor6m_date(), get_libor6m_rate()),
-        Curve::Libor12M => (get_libor12m_date(), get_libor12m_rate()),
-    }
-}
-
-fn get_ois_date() -> Vec<f64> {
+pub fn get_ois_date() -> Vec<f64> {
     vec![
         0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75,
         4.0, 4.25, 4.5, 4.75, 5.0, 5.25, 5.5, 5.75, 6.0, 6.25, 6.5,
     ]
 }
-fn get_ois_rate() -> Vec<f64> {
+pub fn get_ois_rate() -> Vec<f64> {
     vec![
         1.0,
         0.998360233,
@@ -55,14 +38,14 @@ fn get_ois_rate() -> Vec<f64> {
     ]
 }
 
-fn get_libor6m_date() -> Vec<f64> {
+pub fn get_libor6m_date() -> Vec<f64> {
     vec![
         0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75,
         4.0, 4.25, 4.5, 4.75, 5.0, 5.25, 5.5, 5.75, 6.0, 6.25, 6.5,
     ]
 }
 
-fn get_libor6m_rate() -> Vec<f64> {
+pub fn get_libor6m_rate() -> Vec<f64> {
     vec![
         1.0,
         0.996260272,
@@ -94,14 +77,14 @@ fn get_libor6m_rate() -> Vec<f64> {
     ]
 }
 
-fn get_libor12m_date() -> Vec<f64> {
+pub fn get_libor12m_date() -> Vec<f64> {
     vec![
         0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75,
         4.0, 4.25, 4.5, 4.75, 5.0, 5.25, 5.5, 5.75, 6.0, 6.25, 6.5,
     ]
 }
 
-fn get_libor12m_rate() -> Vec<f64> {
+pub fn get_libor12m_rate() -> Vec<f64> {
     vec![
         1.0,
         0.993841213,

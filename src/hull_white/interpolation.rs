@@ -4,7 +4,7 @@
 // ③連立方程式の解から3次多項式の係数を算出する。
 // ④targetにおけるレートを算出する。
 
-pub fn cubic_spline(dates: &Vec<f64>, rates: &Vec<f64>, target: &f64) -> f64 {
+pub fn cubic_spline(dates: &Vec<f64>, rates: &Vec<f64>, target: f64) -> f64 {
     // TODO 引数チェックを入れる
 
     let equation_matrix = set_up_equation(&dates, &rates);
@@ -18,14 +18,14 @@ pub fn cubic_spline(dates: &Vec<f64>, rates: &Vec<f64>, target: &f64) -> f64 {
     // targetの値が属する区間の始点側のindexを算出する。
     // extrapolationとなる点は分岐に入る頻度が少ないので後ろに記述
     let mut target_idx = 0;
-    if &dates[0] <= target && target <= &dates[dates.len() - 1] {
+    if dates[0] <= target && target <= dates[dates.len() - 1] {
         for (i, date) in dates.iter().enumerate() {
             if date > &target {
                 target_idx = i - 1;
                 break;
             }
         }
-    } else if target <= &dates[0] {
+    } else if target <= dates[0] {
         target_idx = 0;
     } else {
         target_idx = dates.len() - 2;
@@ -109,7 +109,7 @@ mod tests {
         let rates = vec![
             0.889, 1.085664, 1.05, 1.12, 1.327, 2.0512, 2.578, 2.2245, 2.115143, 2.356,
         ];
-        let result = cubic_spline(&dates, &rates, &118.0);
+        let result = cubic_spline(&dates, &rates, 118.0);
         assert_eq!(result, 0.936556517871382);
     }
 }

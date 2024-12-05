@@ -1,5 +1,6 @@
 mod algorithm;
 mod analysis;
+mod curve;
 mod data;
 mod hw_lib;
 mod interpolation;

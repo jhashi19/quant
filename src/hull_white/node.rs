@@ -1,4 +1,4 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Node {
     pub rate: f64,                      // 当ノードから次のノードまでの期間の金利
     pub arrow_debreu: f64,              // Arrow Debreu price
@@ -11,16 +11,25 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new() -> Self {
+    pub fn new(
+        rate: f64,
+        arrow_debreu: f64,
+        transition_to_mid_index: isize,
+        rate_fluctuation_mean: f64,
+        rate_fluctuation_var: f64,
+        prob_up: f64,
+        prob_mid: f64,
+        prob_down: f64,
+    ) -> Self {
         Self {
-            rate: 0.0,
-            arrow_debreu: 0.0,
-            transition_to_mid_index: 0,
-            rate_fluctuation_mean: 0.0,
-            rate_fluctuation_var: 0.0,
-            prob_up: 0.0,
-            prob_mid: 0.0,
-            prob_down: 0.0,
+            rate,
+            arrow_debreu,
+            transition_to_mid_index,
+            rate_fluctuation_mean,
+            rate_fluctuation_var,
+            prob_up,
+            prob_mid,
+            prob_down,
         }
     }
 
@@ -73,7 +82,7 @@ impl Node {
 
     /// 遷移確率(中間)を返します。
     fn calc_prob_mid(alpha: f64, rate_fluctuation_var: f64, next_rate_fluctuation: f64) -> f64 {
-        1.0 - rate_fluctuation_var / (2.0 * next_rate_fluctuation.powi(2)) - alpha.powi(2)
+        1.0 - rate_fluctuation_var / next_rate_fluctuation.powi(2) - alpha.powi(2)
     }
 
     /// 遷移確率(下落)を返します。

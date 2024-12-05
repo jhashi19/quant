@@ -1,8 +1,7 @@
-use super::data::{
+use super::curve::{
     self,
-    Curve::{self, Libor12M, Libor6M, Ois},
+    Curve::{self, Ois},
 };
-use super::interpolation::cubic_spline;
 use super::math::std_normal_cdf;
 
 /* One Factor Hull White
@@ -23,10 +22,9 @@ pub enum CapFloorType {
 
 /// 0時点までのディスカウントファクターを返します。
 /// * `curve` - ディスカウントカーブの種類(OIS、LIBOR6M、LIBOR12M)
-/// * `t` - 割戻し時点
-pub fn df(curve: Curve, t: &f64) -> f64 {
-    let (dates, rates) = data::match_curve(curve);
-    cubic_spline(&dates, &rates, t)
+/// * `t` - 割り戻すCFの時点
+pub fn df(curve: curve::Curve, t: f64) -> f64 {
+    curve::df(curve, t)
 }
 
 /// 割引債オプションの理論価格を返します。
@@ -36,10 +34,10 @@ pub fn df(curve: Curve, t: &f64) -> f64 {
 /// * `vol` - ボラティリティ
 /// * `op_type` - Call/Put
 pub fn discount_bond_option(
-    mat_u: &f64,
-    mat_o: &f64,
-    strike: &f64,
-    vol: &f64,
+    mat_u: f64,
+    mat_o: f64,
+    strike: f64,
+    vol: f64,
     op_type: OptionType,
 ) -> f64 {
     let sign = match op_type {
@@ -52,7 +50,7 @@ pub fn discount_bond_option(
 }
 
 /// 割引債オプションのボラティリティを返します。
-pub fn dbo_sigma(a: &f64, sigma: &f64, mat_u: &f64, mat_o: &f64) -> f64 {
+pub fn dbo_sigma(a: &f64, sigma: &f64, mat_u: f64, mat_o: f64) -> f64 {
     sigma / a
         * (1.0 - (-2.0 * a * mat_o).exp() / (2.0 * a)).powf(0.5)
         * (1.0 - (-a * (mat_u - mat_o)).exp())
@@ -60,10 +58,10 @@ pub fn dbo_sigma(a: &f64, sigma: &f64, mat_u: &f64, mat_o: &f64) -> f64 {
 
 /// Caplet、Floorletの理論価格を返します。
 pub fn capfloorlet(
-    date_s: &f64,
-    date_e: &f64,
-    strike: &f64,
-    vol: &f64,
+    date_s: f64,
+    date_e: f64,
+    strike: f64,
+    vol: f64,
     cf_type: CapFloorType,
     curve: Curve,
 ) -> f64 {
@@ -81,7 +79,7 @@ pub fn capfloorlet(
 }
 
 /// Caplet、Floorletのボラティリティを返します。
-pub fn capfloorlet_sigma(a: &f64, sigma: &f64, date_s: &f64, date_e: &f64) -> f64 {
+pub fn capfloorlet_sigma(a: &f64, sigma: &f64, date_s: f64, date_e: f64) -> f64 {
     sigma / a * (1.0 - (-2.0 * date_s).exp()) / (0.5 * a).powf(0.5)
         * (1.0 - (-a * (date_e - date_s)))
 }
@@ -90,7 +88,7 @@ pub fn capfloorlet_sigma(a: &f64, sigma: &f64, date_s: &f64, date_e: &f64) -> f6
 pub fn capfloor(
     dates: &Vec<f64>, // 各Caplet/Floorletの参照レートのスタートとエンドの日付(エンドが次のCFのスタートと一致すると仮定)
     vols: &Vec<f64>,  // 各Caplet/Floorletのボラティリティ
-    strike: &f64,
+    strike: f64,
     cf_type: CapFloorType,
     curve: Curve,
 ) -> f64 {
@@ -99,7 +97,7 @@ pub fn capfloor(
     }
     let mut price = 0.0;
     for i in 0..dates.len() {
-        price += capfloorlet(&dates[i], &dates[i + 1], strike, &vols[i], cf_type, curve);
+        price += capfloorlet(dates[i], dates[i + 1], strike, vols[i], cf_type, curve);
     }
     price
 }

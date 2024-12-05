@@ -1,5 +1,5 @@
 use super::analysis;
-use super::data;
+use super::curve;
 use super::tree;
 
 #[derive(Clone, Debug)]
@@ -28,34 +28,34 @@ impl HullWhite {
     pub fn discount_bond_option(
         a: &f64,
         sigma: &f64,
-        mat_u: &f64,
-        mat_o: &f64,
-        strike: &f64,
+        mat_u: f64,
+        mat_o: f64,
+        strike: f64,
         op_type: analysis::OptionType,
     ) -> f64 {
         let vol = analysis::dbo_sigma(a, sigma, mat_u, mat_o);
-        analysis::discount_bond_option(mat_u, mat_o, strike, &vol, op_type)
+        analysis::discount_bond_option(mat_u, mat_o, strike, vol, op_type)
     }
 
     pub fn capfloorlet(
         a: &f64,
         sigma: &f64,
-        date_s: &f64,
-        date_e: &f64,
-        strike: &f64,
+        date_s: f64,
+        date_e: f64,
+        strike: f64,
         cf_type: analysis::CapFloorType,
-        curve: data::Curve,
+        curve: curve::Curve,
     ) -> f64 {
         let vol = analysis::capfloorlet_sigma(a, sigma, date_s, date_e);
-        analysis::capfloorlet(date_s, date_e, strike, &vol, cf_type, curve)
+        analysis::capfloorlet(date_s, date_e, strike, vol, cf_type, curve)
     }
 
     pub fn capfloor(
         dates: &Vec<f64>,
         vols: &Vec<f64>,
-        strike: &f64,
+        strike: f64,
         cf_type: analysis::CapFloorType,
-        curve: data::Curve,
+        curve: curve::Curve,
     ) -> f64 {
         analysis::capfloor(dates, vols, strike, cf_type, curve)
     }
