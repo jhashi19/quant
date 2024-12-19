@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2, ArrayBase, Dim, OwnedRepr};
+use ndarray::{Array1, Array2};
 use ndarray_linalg::{FactorizeInto, Solve};
 
 pub struct Newton {
@@ -110,37 +110,42 @@ pub fn levenberg_marquardt(
     independent_vars: Vec<f64>, // キャリブレーションに使用する独立変数のベクタ
     dependent_vars: Vec<f64>,  // キャリブレーションに使用する従属変数のベクタ
 ) -> Vec<f64> {
-    let mut squared_sum = 0.0; //誤差の2乗和
+    let mut errors = calc_error(func, &independent_vars, &dependent_vars, &func_args); // 従属変数と関数の値の差分
+    let mut squared_sum: f64 = errors.iter().map(|diff| diff.powi(2)).sum(); //誤差の2乗和
     let mut new_squared_sum: f64; //更新後の誤差の2乗和
-    let mut errors: Array1<f64>; // 従属変数と関数の値の差分
+    let mut jacobian = calc_jacobian(&derivative_funcs, &func_args, &independent_vars); // ヤコビアン
+    let mut params = func_args; // キャリブレーション対象パラメータ
+    let mut new_params: Vec<f64>; // 更新されたキャリブレーション対象パラメータ
     let mut lambda = 0.001; //damping parameter
-    let mut iteration_num = 0; // イテレーション回数（ログに出力するためにカウントする）
-    let mut adjusted_args = func_args;
-    let max_iter = 1000; // 最大イテレーション回数。これを超えると処理は異常終了とする。
-    let threshold = 10e-7; // 誤差のイテレーションごとの変化が小さくなった場合にループを終了する閾値
+    const LAMBDA_UP: f64 = 2.0; // damping parameter を大きくするときの掛ける値(delayed gratification)
+    const LAMBDA_DOWN: f64 = 1.0 / 3.0; // damping parameter を小さくするときの掛ける値(delayed gratification)
+    const MAX_ITER: usize = 1000; // 最大イテレーション回数。これを超えると処理は異常終了とする。
+    const THRESHOLD: f64 = 10e-7; // 誤差のイテレーションごとの変化が小さくなった場合にループを終了する閾値
+    let mut iteration_count = 0; // イテレーション回数
 
-    while iteration_num < max_iter {
-        errors = calc_error(func, &independent_vars, &dependent_vars, &adjusted_args);
-
-        let jacobian = jacobian(&derivative_funcs, &adjusted_args, &independent_vars);
-
-        adjusted_args = update_params(jacobian, &errors, adjusted_args, &are_adjustings, lambda);
-
+    while iteration_count < MAX_ITER {
+        new_params = update_params(&jacobian, &errors, &params, &are_adjustings, lambda);
+        errors = calc_error(func, &independent_vars, &dependent_vars, &new_params);
         new_squared_sum = errors.iter().map(|diff| diff.powi(2)).sum();
-
-        if (new_squared_sum - squared_sum).abs() < threshold {
-            println!("params:{:?}", adjusted_args);
-            println!("iteration_num:{}", iteration_num);
-            return adjusted_args;
+        if (new_squared_sum - squared_sum).abs() < THRESHOLD {
+            println!("params:{:?}", new_params);
+            println!("iteration_count:{}", iteration_count);
+            return new_params;
         }
 
-        lambda = update_lambda(squared_sum, new_squared_sum, lambda);
-        squared_sum = new_squared_sum;
-        iteration_num += 1;
+        if new_squared_sum < squared_sum {
+            params = new_params;
+            jacobian = calc_jacobian(&derivative_funcs, &params, &independent_vars);
+            lambda *= LAMBDA_DOWN;
+            squared_sum = new_squared_sum;
+        } else {
+            lambda *= LAMBDA_UP;
+        }
+        iteration_count += 1;
     }
-    println!("params:{:?}", adjusted_args);
-    println!("iteration_num:{}", iteration_num);
-    adjusted_args
+    println!("params:{:?}", params);
+    println!("iteration_count:{}", iteration_count);
+    panic!("Maximun number of iterations exceeded");
 }
 
 /// 引数のベクタをArray1型に変換して返します。
@@ -148,7 +153,7 @@ fn vec_to_array(vec: &Vec<f64>) -> Array1<f64> {
     Array1::from_shape_fn(vec.len(), |i| vec[i])
 }
 
-/// 関数の値と従属変数の差異を返します。
+/// 現時点のパラメータをもとに計算した関数の値と従属変数の値の差異を返します。
 fn calc_error(
     func: FnTypeLM,
     independent_vars: &Vec<f64>,
@@ -164,21 +169,20 @@ fn calc_error(
 }
 
 fn update_params(
-    jacobian: Array2<f64>,
+    jacobian: &Array2<f64>,
     errors: &Array1<f64>,
-    func_args: Vec<f64>,
+    func_args: &Vec<f64>,
     are_adjustings: &Vec<bool>,
     lambda: f64,
 ) -> Vec<f64> {
     let mut updated_args = func_args.clone();
 
-    let modified_jtj: ArrayBase<OwnedRepr<f64>, Dim<[usize; 2]>> =
-        jacobian.t().dot(&jacobian) + lambda * Array2::eye(jacobian.shape()[1]);
+    let modified_jtj: Array2<f64> =
+        jacobian.t().dot(jacobian) + lambda * Array2::eye(jacobian.shape()[1]);
 
     // 以下は各対角成分に一律でlambdaを足すのではなく、jtjの対角成分のlambda倍を足すパターン
-    // しかしこの書き方コンパイルエラーとなるため、修正が必要
-    // let jtj = jacobian.t().dot(&jacobian);
-    // let modified_jtj = jtj + lambda * jtj.diag();
+    // let jtj = jacobian.t().dot(jacobian);
+    // let modified_jtj = &jtj + &(&Array2::from_diag(&jtj.diag()) * lambda);
 
     let modified_jtj = modified_jtj.factorize_into().unwrap();
     let delta_args = modified_jtj.solve_into(-jacobian.t().dot(errors)).unwrap();
@@ -194,19 +198,8 @@ fn update_params(
     updated_args
 }
 
-fn update_lambda(squared_sum: f64, new_squared_sum: f64, lambda: f64) -> f64 {
-    let lambda_up = 2.0; // damping parameter を大きくするときの掛ける値(delayed gratification)
-    let lambda_down = 1.0 / 3.0; // damping parameter を小さくするときの掛ける値(delayed gratification)
-
-    if new_squared_sum > squared_sum {
-        lambda * lambda_up
-    } else {
-        lambda * lambda_down
-    }
-}
-
 /// ヤコビアンを計算して返します。
-fn jacobian(
+fn calc_jacobian(
     derivative_funcs: &Vec<FnTypeLM>, // 各調整パラメータごとの偏導関数のベクタ
     args: &Vec<f64>,                  // 偏導関数の引数
     independent_vars: &Vec<f64>,      // 調整に使用する独立変数のベクタ
@@ -273,9 +266,9 @@ mod tests {
         fn f_deriv_x(w: f64, v: &[f64]) -> f64 {
             1.0
         }
-        fn f_deriv_y(w: f64, v: &[f64]) -> f64 {
-            w
-        }
+        // fn f_deriv_y(w: f64, v: &[f64]) -> f64 {
+        //     w
+        // }
         fn f_deriv_z(w: f64, v: &[f64]) -> f64 {
             w.powi(2)
         }
