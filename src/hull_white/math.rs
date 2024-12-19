@@ -1,11 +1,12 @@
 use libm::erf;
 use std::f64::{INFINITY, NEG_INFINITY};
 
+/// 標準正規分布の分布関数です。
 pub fn std_normal_cdf(x: f64) -> f64 {
     0.5 * (1.0 + erf(x / 2_f64.sqrt()))
 }
 
-// Acklam's algorithm
+/// Acklam's algorithm による標準正規分布の分布関数の逆関数です。
 pub fn inverse_std_normal_cdf(x: f64) -> f64 {
     let a1 = -3.969683028665376e+01;
     let a2 = 2.209460984245205e+02;
@@ -62,6 +63,7 @@ pub fn inverse_std_normal_cdf(x: f64) -> f64 {
     }
 }
 
+/// Wichura's algorithm による標準正規分布の分布関数の逆関数です。
 pub fn wichura_inverse_normal_cdf(x: f64) -> f64 {
     let split1 = 0.425;
     let split2 = 5.0;
