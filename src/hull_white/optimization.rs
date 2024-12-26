@@ -102,15 +102,19 @@ impl Newton {
 type FnTypeLM = fn(f64, &[f64]) -> f64;
 
 // struct では実装しづらいため関数で実装。
-pub fn levenberg_marquardt(
-    func: FnTypeLM,                  // キャリブレーションする対象の関数
+pub fn levenberg_marquardt<F, G>(
+    func: F,                    // キャリブレーションする対象の関数
     func_args: Vec<f64>, // 関数の引数のうち、キャリブレーションに使用する独立変数となる変数以外（調整パラメータを含む）
     are_adjustings: Vec<bool>, // 関数の引数のうち、キャリブレーションで調整するパラメータのインデックスをtrueとするベクタ
-    derivative_funcs: Vec<FnTypeLM>, // 各調整パラメータごとの、関数の偏導関数のベクタ
+    derivative_funcs: Vec<G>, // 各調整パラメータごとの、関数の偏導関数のベクタ（調整する対象のパラメータの偏微分のみ）
     independent_vars: Vec<f64>, // キャリブレーションに使用する独立変数のベクタ
-    dependent_vars: Vec<f64>,  // キャリブレーションに使用する従属変数のベクタ
-) -> Vec<f64> {
-    let mut errors = calc_error(func, &independent_vars, &dependent_vars, &func_args); // 従属変数と関数の値の差分
+    dependent_vars: Vec<f64>, // キャリブレーションに使用する従属変数のベクタ
+) -> Vec<f64>
+where
+    F: Fn(f64, &[f64]) -> f64,
+    G: Fn(f64, &[f64]) -> f64,
+{
+    let mut errors = calc_error(&func, &independent_vars, &dependent_vars, &func_args); // 従属変数と関数の値の差分
     let mut squared_sum: f64 = errors.iter().map(|diff| diff.powi(2)).sum(); //誤差の2乗和
     let mut new_squared_sum: f64; //更新後の誤差の2乗和
     let mut jacobian = calc_jacobian(&derivative_funcs, &func_args, &independent_vars); // ヤコビアン
@@ -120,12 +124,12 @@ pub fn levenberg_marquardt(
     const LAMBDA_UP: f64 = 2.0; // damping parameter を大きくするときの掛ける値(delayed gratification)
     const LAMBDA_DOWN: f64 = 1.0 / 3.0; // damping parameter を小さくするときの掛ける値(delayed gratification)
     const MAX_ITER: usize = 1000; // 最大イテレーション回数。これを超えると処理は異常終了とする。
-    const THRESHOLD: f64 = 10e-7; // 誤差のイテレーションごとの変化が小さくなった場合にループを終了する閾値
+    const THRESHOLD: f64 = 1e-7; // 誤差のイテレーションごとの変化が小さくなった場合にループを終了する閾値
     let mut iteration_count = 0; // イテレーション回数
 
     while iteration_count < MAX_ITER {
         new_params = update_params(&jacobian, &errors, &params, &are_adjustings, lambda);
-        errors = calc_error(func, &independent_vars, &dependent_vars, &new_params);
+        errors = calc_error(&func, &independent_vars, &dependent_vars, &new_params);
         new_squared_sum = errors.iter().map(|diff| diff.powi(2)).sum();
         if (new_squared_sum - squared_sum).abs() < THRESHOLD {
             println!("params:{:?}", new_params);
@@ -154,12 +158,15 @@ fn vec_to_array(vec: &Vec<f64>) -> Array1<f64> {
 }
 
 /// 現時点のパラメータをもとに計算した関数の値と従属変数の値の差異を返します。
-fn calc_error(
-    func: FnTypeLM,
+fn calc_error<F>(
+    func: &F,
     independent_vars: &Vec<f64>,
     dependent_vars: &Vec<f64>,
     func_args: &Vec<f64>,
-) -> Array1<f64> {
+) -> Array1<f64>
+where
+    F: Fn(f64, &[f64]) -> f64,
+{
     // 独立変数ごとの関数の値（パラメータを調整するごとに更新）
     let mut func_vals: Array1<f64> = Array1::zeros(independent_vars.len());
     for i in 0..independent_vars.len() {
@@ -168,6 +175,7 @@ fn calc_error(
     &func_vals - &vec_to_array(dependent_vars)
 }
 
+/// パラメータを更新して返します。
 fn update_params(
     jacobian: &Array2<f64>,
     errors: &Array1<f64>,
@@ -199,11 +207,14 @@ fn update_params(
 }
 
 /// ヤコビアンを計算して返します。
-fn calc_jacobian(
-    derivative_funcs: &Vec<FnTypeLM>, // 各調整パラメータごとの偏導関数のベクタ
-    args: &Vec<f64>,                  // 偏導関数の引数
-    independent_vars: &Vec<f64>,      // 調整に使用する独立変数のベクタ
-) -> Array2<f64> {
+fn calc_jacobian<F>(
+    derivative_funcs: &Vec<F>,   // 各調整パラメータごとの偏導関数のベクタ
+    args: &Vec<f64>,             // 偏導関数の引数
+    independent_vars: &Vec<f64>, // 調整に使用する独立変数のベクタ
+) -> Array2<f64>
+where
+    F: Fn(f64, &[f64]) -> f64,
+{
     let row_num = independent_vars.len();
     let column_num = derivative_funcs.len();
     let mut jacobian: Array2<f64> = Array2::zeros((row_num, column_num));
@@ -216,7 +227,10 @@ fn calc_jacobian(
 }
 
 /// 引数の関数を引数の1つで数値微分により偏微分した値を返します。
-pub fn numerical_difference(f: &dyn Fn(&[f64]) -> f64, args: &Vec<f64>, idx: usize) -> f64 {
+pub fn numerical_difference<F>(f: F, args: &Vec<f64>, idx: usize) -> f64
+where
+    F: Fn(&[f64]) -> f64,
+{
     let h;
     if args[idx] == 0.0 {
         h = 0.0001;
@@ -228,6 +242,28 @@ pub fn numerical_difference(f: &dyn Fn(&[f64]) -> f64, args: &Vec<f64>, idx: usi
     incremented_args[idx] += h;
 
     (f(&incremented_args) - f(args)) / h
+}
+
+/// levenberg_marquardt用に数値微分による偏微分を計算するクロージャを返します。
+/// 返すクロージャの最初の引数は独立変数、2番目は調整パラメータのベクタです。
+fn numerical_difference_for_lm(f: FnTypeLM, index: usize) -> impl Fn(f64, &[f64]) -> f64 {
+    move |x: f64, v: &[f64]| {
+        let mut params = v.to_vec();
+        params.insert(0, x);
+        numerical_difference(|args| f(args[0], &args[1..].to_vec()), &params, index)
+    }
+}
+
+/// levenberg_marquardtのderivative_funcs引数にそのまま設定できる形式で数値微分による偏微分関数を返します。
+pub fn derivative_funcs_numerical_difference_for_lm(
+    f: fn(f64, &[f64]) -> f64,
+    index_num: usize,
+) -> Vec<Box<dyn Fn(f64, &[f64]) -> f64>> {
+    let mut derivative_funcs: Vec<Box<dyn Fn(f64, &[f64]) -> f64>> = Vec::with_capacity(index_num);
+    for i in 1..=index_num {
+        derivative_funcs.push(Box::new(numerical_difference_for_lm(f, i)));
+    }
+    derivative_funcs
 }
 
 #[cfg(test)]
@@ -263,32 +299,27 @@ mod tests {
             let z = v[2];
             x + w * y + w.powi(2) * z
         }
-        fn f_deriv_x(w: f64, v: &[f64]) -> f64 {
-            1.0
-        }
-        // fn f_deriv_y(w: f64, v: &[f64]) -> f64 {
-        //     w
-        // }
-        fn f_deriv_z(w: f64, v: &[f64]) -> f64 {
-            w.powi(2)
-        }
+        let f_deriv_x = |w: f64, v: &[f64]| -> f64 { 1.0 };
+        // let f_deriv_y = |w: f64, v: &[f64]| -> f64 { w };
+        let f_deriv_z = |w: f64, v: &[f64]| -> f64 { w.powi(2) };
+
         let func_args = vec![1.0, 1.9, 1.0];
         let are_adjustings = vec![true, false, true];
-        // let derivative_funcs: Vec<FnTypeLM> = vec![f_deriv_x, f_deriv_y, f_deriv_z];
         let derivative_funcs: Vec<FnTypeLM> = vec![f_deriv_x, f_deriv_z];
         let independent_vars = vec![0.0, 1.0, 2.0, 3.0, 4.0];
         let dependent_vars = vec![-0.9, 1.9, 7.3, 13.8, 23.5];
         let actual_vec = levenberg_marquardt(
-            f,
+            &f,
             func_args,
             are_adjustings,
             derivative_funcs,
             independent_vars,
             dependent_vars,
         );
-        assert!((actual_vec[0] - (-0.945517241379294)).abs() < 1.0e-10);
+        let tolerance = 1e-10;
+        assert!((actual_vec[0] - (-0.945517241379294)).abs() < tolerance);
         assert_eq!(actual_vec[1], 1.9);
-        assert!((actual_vec[2] - 1.04425287356321).abs() < 1.0e-10);
+        assert!((actual_vec[2] - 1.04425287356321).abs() < tolerance);
     }
 
     #[test]
@@ -312,18 +343,18 @@ mod tests {
         let args = vec![-0.24, 0.51];
         // 期待値との差の許容範囲はとりあえずで設定。
         // 引数の水準から決めようとしたが、対象の関数によるため。
-        let tolerance = 10e-1;
+        let tolerance = 1e-1;
         // let tolerance = args
         //     .iter()
         //     .map(|x: &f64| x.abs())
         //     .fold(0.0, |m, v| v.max(m))
         //     / 10.0;
-        let actual_deriv_x = numerical_difference(&f, &args, 0);
+        let actual_deriv_x = numerical_difference(f, &args, 0);
         let expected_deriv_x = f_deriv_x(&args);
         println!("actual_deriv_x: {}", actual_deriv_x);
         println!("expected_deriv_x: {}", expected_deriv_x);
 
-        let actual_deriv_y = numerical_difference(&f, &args, 1);
+        let actual_deriv_y = numerical_difference(f, &args, 1);
         let expected_deriv_y = f_deriv_y(&args);
         println!("actual_deriv_y: {}", actual_deriv_y);
         println!("expected_deriv_y: {}", expected_deriv_y);
@@ -331,5 +362,33 @@ mod tests {
         println!("tolerance: {}", tolerance);
         assert!((actual_deriv_x - expected_deriv_x).abs() < tolerance);
         assert!((actual_deriv_y - expected_deriv_y).abs() < tolerance);
+    }
+
+    #[test]
+    fn test_levenberg_marquardt_numerical_difference() {
+        fn f(w: f64, v: &[f64]) -> f64 {
+            let x = v[0];
+            let y = v[1];
+            let z = v[2];
+            x + w * y + w.powi(2) * z
+        }
+
+        let func_args = vec![1.0, 1.9, 1.0];
+        let are_adjustings = vec![true, false, true];
+        let derivative_funcs = derivative_funcs_numerical_difference_for_lm(f, 2);
+        let independent_vars = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+        let dependent_vars = vec![-0.9, 1.9, 7.3, 13.8, 23.5];
+        let actual_vec = levenberg_marquardt(
+            &f,
+            func_args,
+            are_adjustings,
+            derivative_funcs,
+            independent_vars,
+            dependent_vars,
+        );
+        let tolerance = 1e-2;
+        assert!((actual_vec[0] - (-0.945517241379294)).abs() < tolerance);
+        assert_eq!(actual_vec[1], 1.9);
+        assert!((actual_vec[2] - 1.04425287356321).abs() < tolerance);
     }
 }
