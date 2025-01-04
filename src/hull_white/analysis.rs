@@ -8,6 +8,7 @@ use super::math::std_normal_cdf;
 dr_t = (θ_t - a * r_t) * dt - σ * dW_t */
 
 // Day Count Conventionは考慮しない。
+
 #[derive(Clone, Copy, Debug)]
 pub enum OptionType {
     Call,
@@ -18,6 +19,12 @@ pub enum OptionType {
 pub enum CapFloorType {
     Cap,
     Floor,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum SwaptionType {
+    Payer,
+    Receiver,
 }
 
 /// 0時点までのディスカウントファクターを返します。
@@ -50,9 +57,9 @@ pub fn discount_bond_option(
 }
 
 /// 割引債オプションのボラティリティを返します。
-pub fn dbo_sigma(a: &f64, sigma: &f64, mat_u: f64, mat_o: f64) -> f64 {
+pub fn dbo_vol(a: f64, sigma: f64, mat_u: f64, mat_o: f64) -> f64 {
     sigma / a
-        * (1.0 - (-2.0 * a * mat_o).exp() / (2.0 * a)).powf(0.5)
+        * (1.0 - (-2.0 * a * mat_o).exp() / (2.0 * a)).sqrt()
         * (1.0 - (-a * (mat_u - mat_o)).exp())
 }
 
@@ -79,9 +86,8 @@ pub fn capfloorlet(
 }
 
 /// Caplet、Floorletのボラティリティを返します。
-pub fn capfloorlet_sigma(a: &f64, sigma: &f64, date_s: f64, date_e: f64) -> f64 {
-    sigma / a * (1.0 - (-2.0 * date_s).exp()) / (0.5 * a).powf(0.5)
-        * (1.0 - (-a * (date_e - date_s)))
+pub fn capfloorlet_vol(a: f64, sigma: f64, date_s: f64, date_e: f64) -> f64 {
+    sigma / a * (1.0 - (-2.0 * date_s).exp()) / (0.5 * a).sqrt() * (1.0 - (-a * (date_e - date_s)))
 }
 
 /// Cap、Floorの理論価格を返します。
@@ -103,6 +109,70 @@ pub fn capfloor(
 }
 
 /// Swaptionの理論価格を返します。
-pub fn swaption() -> f64 {
-    0.0
+/// ATMとなるショートレートの逆算を省略するための近似値を返します。
+pub fn swaption(
+    swap_dates: &Vec<f64>,
+    strike: f64,
+    vol: f64,
+    op_type: SwaptionType,
+    curve: Curve,
+) -> f64 {
+    let sign = match op_type {
+        SwaptionType::Payer => -1.0,
+        SwaptionType::Receiver => 1.0,
+    };
+
+    let coupon_bearing_bond = coupon_bearing_bond(&swap_dates, strike, curve);
+
+    // Swaption価格の計算
+    let d = ((coupon_bearing_bond * df(curve, swap_dates[1])
+        / (df(Ois, swap_dates[1]) * df(curve, swap_dates[0])))
+    .ln()
+        + 0.5 * vol.powi(2))
+        / vol;
+    sign * coupon_bearing_bond * std_normal_cdf(sign * d)
+        - sign * df(Ois, swap_dates[1]) * df(curve, swap_dates[0]) / df(curve, swap_dates[1])
+            * std_normal_cdf(sign * (d - vol))
+}
+
+pub fn swaption_vol(
+    a: f64,
+    sigma: f64,
+    mat_op: f64,
+    swap_dates: &Vec<f64>,
+    strike: f64,
+    curve: Curve,
+) -> f64 {
+    let b = |mat: f64| 1.0 / a * (1.0 - (-a * mat).exp());
+    let coupons = coupons(swap_dates, strike, curve);
+    let coupon_bearing_bond = coupon_bearing_bond(swap_dates, strike, curve);
+    let weighted_b = coupons.iter().enumerate().fold(0.0, |acc, (i, coupon)| {
+        acc + coupon * df(Ois, swap_dates[i + 1]) * (b(swap_dates[0]) - b(swap_dates[i + 1]))
+    });
+    let modified_mat =
+        -1.0 / a * (1.0 - a * (b(swap_dates[0]) - 1.0 / coupon_bearing_bond * weighted_b)).ln();
+    sigma / a
+        * ((1.0 - (-2.0 * a * mat_op).exp()) / (2.0 * a)).sqrt()
+        * ((-a * (swap_dates[0] - mat_op)).exp() - (-a * (modified_mat - mat_op)).exp())
+}
+
+fn coupons(swap_dates: &Vec<f64>, strike: f64, curve: Curve) -> Vec<f64> {
+    let swap_length = swap_dates.len();
+    let mut coupons: Vec<f64> = Vec::with_capacity(swap_length - 1);
+    for i in 0..swap_length - 2 {
+        coupons.push(
+            1.0 - (df(curve, swap_dates[i + 1]) * df(Ois, swap_dates[i + 2]))
+                / (df(curve, swap_dates[i + 2]) * df(Ois, swap_dates[i + 1]))
+                + strike * (swap_dates[i + 1] - swap_dates[i]),
+        );
+    }
+    coupons.push(1.0 + strike * (swap_dates[swap_length - 1] - swap_dates[swap_length - 2]));
+    coupons
+}
+
+fn coupon_bearing_bond(swap_dates: &Vec<f64>, strike: f64, curve: Curve) -> f64 {
+    coupons(swap_dates, strike, curve)
+        .iter()
+        .zip(swap_dates[1..].iter())
+        .fold(0.0, |acc, (coupon, date)| acc + coupon * df(Ois, *date))
 }

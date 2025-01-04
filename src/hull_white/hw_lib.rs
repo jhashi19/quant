@@ -26,27 +26,27 @@ impl HullWhite {
     }
 
     pub fn discount_bond_option(
-        a: &f64,
-        sigma: &f64,
+        a: f64,
+        sigma: f64,
         mat_u: f64,
         mat_o: f64,
         strike: f64,
         op_type: analysis::OptionType,
     ) -> f64 {
-        let vol = analysis::dbo_sigma(a, sigma, mat_u, mat_o);
+        let vol = analysis::dbo_vol(a, sigma, mat_u, mat_o);
         analysis::discount_bond_option(mat_u, mat_o, strike, vol, op_type)
     }
 
     pub fn capfloorlet(
-        a: &f64,
-        sigma: &f64,
+        a: f64,
+        sigma: f64,
         date_s: f64,
         date_e: f64,
         strike: f64,
         cf_type: analysis::CapFloorType,
         curve: curve::Curve,
     ) -> f64 {
-        let vol = analysis::capfloorlet_sigma(a, sigma, date_s, date_e);
+        let vol = analysis::capfloorlet_vol(a, sigma, date_s, date_e);
         analysis::capfloorlet(date_s, date_e, strike, vol, cf_type, curve)
     }
 
@@ -60,8 +60,16 @@ impl HullWhite {
         analysis::capfloor(dates, vols, strike, cf_type, curve)
     }
 
-    pub fn swaption(&self) -> f64 {
-        // analysis::swaption()
-        0.0
+    pub fn swaption(
+        a: f64,
+        sigma: f64,
+        mat_op: f64,
+        strike: f64,
+        swap_dates: &Vec<f64>,
+        op_type: analysis::SwaptionType,
+        curve: curve::Curve,
+    ) -> f64 {
+        let vol = analysis::swaption_vol(a, sigma, mat_op, swap_dates, strike, curve);
+        analysis::swaption(swap_dates, strike, vol, op_type, curve)
     }
 }
