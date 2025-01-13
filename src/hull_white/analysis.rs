@@ -35,12 +35,25 @@ pub fn df(curve: curve::Curve, t: f64) -> f64 {
 }
 
 /// 割引債オプションの理論価格を返します。
+pub fn discount_bond_option(
+    a: f64,
+    sigma: f64,
+    mat_u: f64,
+    mat_o: f64,
+    strike: f64,
+    op_type: OptionType,
+) -> f64 {
+    let vol = dbo_vol(a, sigma, mat_u, mat_o);
+    discount_bond_option_given_vol(mat_u, mat_o, strike, vol, op_type)
+}
+
+/// ボラティリティが与えられている場合の割引債オプションの理論価格を返します。
 /// * `mat_u` - 原資産の債券の満期日
 /// * `mat_o` - オプションの満期日
 /// * `strike` - 権利行使価格
 /// * `vol` - ボラティリティ
 /// * `op_type` - Call/Put
-pub fn discount_bond_option(
+pub fn discount_bond_option_given_vol(
     mat_u: f64,
     mat_o: f64,
     strike: f64,
@@ -65,6 +78,19 @@ pub fn dbo_vol(a: f64, sigma: f64, mat_u: f64, mat_o: f64) -> f64 {
 
 /// Caplet、Floorletの理論価格を返します。
 pub fn capfloorlet(
+    a: f64,
+    sigma: f64,
+    date_s: f64,
+    date_e: f64,
+    strike: f64,
+    cf_type: CapFloorType,
+    curve: curve::Curve,
+) -> f64 {
+    let vol = capfloorlet_vol(a, sigma, date_s, date_e);
+    capfloorlet_given_vol(date_s, date_e, strike, vol, cf_type, curve)
+}
+
+pub fn capfloorlet_given_vol(
     date_s: f64,
     date_e: f64,
     strike: f64,
@@ -92,6 +118,16 @@ pub fn capfloorlet_vol(a: f64, sigma: f64, date_s: f64, date_e: f64) -> f64 {
 
 /// Cap、Floorの理論価格を返します。
 pub fn capfloor(
+    dates: &Vec<f64>,
+    vols: &Vec<f64>,
+    strike: f64,
+    cf_type: CapFloorType,
+    curve: curve::Curve,
+) -> f64 {
+    capfloor_given_vols(dates, vols, strike, cf_type, curve)
+}
+
+pub fn capfloor_given_vols(
     dates: &Vec<f64>, // 各Caplet/Floorletの参照レートのスタートとエンドの日付(エンドが次のCFのスタートと一致すると仮定)
     vols: &Vec<f64>,  // 各Caplet/Floorletのボラティリティ
     strike: f64,
@@ -103,7 +139,7 @@ pub fn capfloor(
     }
     let mut price = 0.0;
     for i in 0..dates.len() {
-        price += capfloorlet(dates[i], dates[i + 1], strike, vols[i], cf_type, curve);
+        price += capfloorlet_given_vol(dates[i], dates[i + 1], strike, vols[i], cf_type, curve);
     }
     price
 }
@@ -111,25 +147,37 @@ pub fn capfloor(
 /// Swaptionの理論価格を返します。
 /// ATMとなるショートレートの逆算を省略するための近似値を返します。
 pub fn swaption(
+    a: f64,
+    sigma: f64,
+    mat_op: f64,
+    strike: f64,
+    swap_dates: &Vec<f64>,
+    op_type: SwaptionType,
+    curve: curve::Curve,
+) -> f64 {
+    let vol = swaption_vol(a, sigma, mat_op, swap_dates, strike, curve);
+    swaption_given_vol(swap_dates, strike, vol, op_type, curve)
+}
+
+pub fn swaption_given_vol(
     swap_dates: &Vec<f64>,
     strike: f64,
     vol: f64,
     op_type: SwaptionType,
     curve: Curve,
 ) -> f64 {
-    let sign = match op_type {
-        SwaptionType::Payer => -1.0,
-        SwaptionType::Receiver => 1.0,
-    };
-
     let coupon_bearing_bond = coupon_bearing_bond(&swap_dates, strike, curve);
-
-    // Swaption価格の計算
     let d = ((coupon_bearing_bond * df(curve, swap_dates[1])
         / (df(Ois, swap_dates[1]) * df(curve, swap_dates[0])))
     .ln()
         + 0.5 * vol.powi(2))
         / vol;
+
+    let sign = match op_type {
+        SwaptionType::Payer => -1.0,
+        SwaptionType::Receiver => 1.0,
+    };
+
     sign * coupon_bearing_bond * std_normal_cdf(sign * d)
         - sign * df(Ois, swap_dates[1]) * df(curve, swap_dates[0]) / df(curve, swap_dates[1])
             * std_normal_cdf(sign * (d - vol))

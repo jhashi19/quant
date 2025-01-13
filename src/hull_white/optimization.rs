@@ -246,7 +246,10 @@ where
 
 /// levenberg_marquardt用に数値微分による偏微分を計算するクロージャを返します。
 /// 返すクロージャの最初の引数は独立変数、2番目は調整パラメータのベクタです。
-fn numerical_difference_for_lm(f: FnTypeLM, index: usize) -> impl Fn(f64, &[f64]) -> f64 {
+fn numerical_difference_for_lm<F>(f: F, index: usize) -> impl Fn(f64, &[f64]) -> f64
+where
+    F: Fn(f64, &[f64]) -> f64,
+{
     move |x: f64, v: &[f64]| {
         let mut params = v.to_vec();
         params.insert(0, x);
@@ -255,10 +258,13 @@ fn numerical_difference_for_lm(f: FnTypeLM, index: usize) -> impl Fn(f64, &[f64]
 }
 
 /// levenberg_marquardtのderivative_funcs引数にそのまま設定できる形式で数値微分による偏微分関数を返します。
-pub fn derivative_funcs_numerical_difference_for_lm(
-    f: fn(f64, &[f64]) -> f64,
+pub fn derivative_funcs_numerical_difference_for_lm<F>(
+    f: F,
     index_num: usize,
-) -> Vec<Box<dyn Fn(f64, &[f64]) -> f64>> {
+) -> Vec<Box<dyn Fn(f64, &[f64]) -> f64>>
+where
+    F: Fn(f64, &[f64]) -> f64 + Copy + 'static,
+{
     let mut derivative_funcs: Vec<Box<dyn Fn(f64, &[f64]) -> f64>> = Vec::with_capacity(index_num);
     for i in 1..=index_num {
         derivative_funcs.push(Box::new(numerical_difference_for_lm(f, i)));
