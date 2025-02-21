@@ -42,7 +42,7 @@ pub fn instantaneous_forward_rate(curve: Curve, t: f64) -> f64 {
     let params = vec![beta0, beta1, beta2, beta3, tau1, tau2];
     let are_adjustings = params.iter().map(|_| true).collect::<Vec<bool>>();
     let derivative_funcs =
-        derivative_funcs_numerical_difference_for_lm(zero_rate_svensson, params.len());
+        derivative_funcs_numerical_difference_for_lm(&zero_rate_svensson, params.len());
 
     let adjusted_params = levenberg_marquardt(
         &zero_rate_svensson,

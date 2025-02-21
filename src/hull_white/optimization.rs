@@ -258,14 +258,15 @@ where
 }
 
 /// levenberg_marquardtのderivative_funcs引数にそのまま設定できる形式で数値微分による偏微分関数を返します。
-pub fn derivative_funcs_numerical_difference_for_lm<F>(
-    f: F,
+pub fn derivative_funcs_numerical_difference_for_lm<'a, F>(
+    f: &'a F,
     index_num: usize,
-) -> Vec<Box<dyn Fn(f64, &[f64]) -> f64>>
+) -> Vec<Box<dyn Fn(f64, &[f64]) -> f64 + 'a>>
 where
-    F: Fn(f64, &[f64]) -> f64 + Copy + 'static,
+    F: Fn(f64, &[f64]) -> f64 + Copy + 'a,
 {
-    let mut derivative_funcs: Vec<Box<dyn Fn(f64, &[f64]) -> f64>> = Vec::with_capacity(index_num);
+    let mut derivative_funcs: Vec<Box<dyn Fn(f64, &[f64]) -> f64 + 'a>> =
+        Vec::with_capacity(index_num);
     for i in 1..=index_num {
         derivative_funcs.push(Box::new(numerical_difference_for_lm(f, i)));
     }
@@ -381,7 +382,7 @@ mod tests {
 
         let func_args = vec![1.0, 1.9, 1.0];
         let are_adjustings = vec![true, false, true];
-        let derivative_funcs = derivative_funcs_numerical_difference_for_lm(f, 2);
+        let derivative_funcs = derivative_funcs_numerical_difference_for_lm(&f, 2);
         let independent_vars = vec![0.0, 1.0, 2.0, 3.0, 4.0];
         let dependent_vars = vec![-0.9, 1.9, 7.3, 13.8, 23.5];
         let actual_vec = levenberg_marquardt(

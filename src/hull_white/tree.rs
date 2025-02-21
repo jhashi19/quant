@@ -141,7 +141,7 @@ impl Tree {
     /// piecewise-constantなパラメータの指定したポイントでの値を返します。<br>
     /// intervalの外側の値については端の値に一致するものとします。
     /// * `val` - piecewise-constantなパラメータの値のベクタ
-    /// * `interval` - piecewise-constantなパラメータの値に対応する時間間隔のベクタ
+    /// * `interval` - piecewise-constantなパラメータの値に対応する時間間隔のベクタ（左端）
     /// * `target` - 戻り値のポイント
     fn get_piecewise_constant_value(val: &Vec<f64>, interval: &Vec<f64>, target: f64) -> f64 {
         if target < interval[0] {
